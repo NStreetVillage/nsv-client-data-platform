@@ -1,0 +1,779 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>NSV Client Data Platform</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --border: #e5e7eb;
+      --muted: #6b7280;
+      --text: #111827;
+      --accent: #111827;
+      --soft: #f3f4f6;
+      --warning: #fff7ed;
+      --warning-border: #fed7aa;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: #111827;
+      color: white;
+      padding: 24px 18px;
+    }
+
+    .sidebar h1 {
+      font-size: 19px;
+      margin: 0 0 6px 0;
+      line-height: 1.2;
+    }
+
+    .sidebar p {
+      color: #d1d5db;
+      margin: 0 0 24px 0;
+      font-size: 13px;
+    }
+
+    .tab-button {
+      width: 100%;
+      background: transparent;
+      border: 1px solid transparent;
+      color: #e5e7eb;
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .tab-button:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .tab-button.active {
+      background: white;
+      color: #111827;
+    }
+
+    .main {
+      padding: 32px;
+    }
+
+    .header-card, .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.05);
+      margin-bottom: 22px;
+    }
+
+    .header-card h2 {
+      margin: 0 0 8px 0;
+    }
+
+    .header-card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .drop-zone {
+      border: 2px dashed #9ca3af;
+      border-radius: 14px;
+      padding: 45px;
+      text-align: center;
+      cursor: pointer;
+      background: #f9fafb;
+      margin-bottom: 24px;
+    }
+
+    .drop-zone.dragover {
+      background: #eef2ff;
+      border-color: #4f46e5;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    input, select, textarea {
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      width: 100%;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+
+    .stat {
+      background: var(--soft);
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    .placeholder {
+      padding: 24px;
+      border: 1px dashed #9ca3af;
+      border-radius: 14px;
+      background: #f9fafb;
+      color: #374151;
+    }
+
+    button.primary {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      margin-top: 18px;
+      font-weight: bold;
+    }
+
+    button.primary:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 18px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--soft);
+    }
+
+    .section {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .message {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 8px;
+      background: var(--soft);
+      white-space: pre-wrap;
+    }
+
+    .required {
+      color: #b91c1c;
+    }
+
+    .banner {
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--warning);
+      border: 1px solid var(--warning-border);
+      margin-top: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .grid, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <h1>NSV Client Data Platform</h1>
+      <p>Phase 1 prototype</p>
+
+      <button class="tab-button active" data-tab="overview">Overview</button>
+      <button class="tab-button" data-tab="upload">Upload Data</button>
+      <button class="tab-button" data-tab="visualizations">Tableau Visualizations</button>
+      <button class="tab-button" data-tab="ai">AI Insights</button>
+      <button class="tab-button" data-tab="clients">Client Master Records</button>
+      <button class="tab-button" data-tab="reviews">Review Queue</button>
+      <button class="tab-button" data-tab="sources">Data Sources</button>
+      <button class="tab-button" data-tab="settings">Admin / Settings</button>
+    </aside>
+
+    <main class="main">
+      <section id="overview" class="tab-content active">
+        <div class="header-card">
+          <h2>Overview</h2>
+          <p>Centralize client data from JotForm, HMIS, HTH, and eCW into a SQL-backed client master system.</p>
+          <div class="banner"><strong>Current status:</strong> Upload/import prototype with placeholder tabs for future Tableau dashboards, AI insights, client search, and admin workflows.</div>
+        </div>
+
+        <div class="grid-3">
+          <div class="stat"><strong id="statClients">—</strong>Clients</div>
+          <div class="stat"><strong id="statPrograms">—</strong>Programs</div>
+          <div class="stat"><strong id="statImports">—</strong>Imports</div>
+          <div class="stat"><strong id="statReviews">—</strong>Needs Review</div>
+        </div>
+
+        <div class="panel">
+          <h3>Phase 1 Focus</h3>
+          <ul>
+            <li>Create NSV Client ID</li>
+            <li>Normalize client records using name + DOB matching</li>
+            <li>Build spreadsheet import process</li>
+            <li>Create client master table</li>
+            <li>Prepare database for Tableau reporting</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="upload" class="tab-content">
+        <div class="header-card">
+          <h2>Upload Data</h2>
+          <p>Upload a CSV or Excel report, preview it, map columns, and import records into the NSV database.</p>
+        </div>
+
+        <div class="panel">
+          <div id="dropZone" class="drop-zone">
+            <strong>Drop CSV/Excel file here</strong>
+            <p>or click to browse</p>
+            <input id="fileInput" type="file" accept=".csv,.xlsx,.xls" />
+          </div>
+
+          <div class="grid">
+            <div>
+              <label for="sourceSystem">Source System <span class="required">*</span></label>
+              <select id="sourceSystem">
+                <option value="">Select source</option>
+                <option value="eCW">eCW</option>
+                <option value="JotForm">JotForm</option>
+                <option value="HMIS">HMIS</option>
+                <option value="HTH">HTH</option>
+                <option value="HMIS/HTH">HMIS/HTH</option>
+                <option value="Method in Progress">Method in Progress</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="programName">Program Name <span class="required">*</span></label>
+              <select id="programName">
+                <option value="">Select a source first</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="previewSection" class="section" style="display:none;">
+            <h2>Preview</h2>
+            <div id="fileInfo"></div>
+            <div id="previewTable"></div>
+          </div>
+
+          <div id="mappingSection" class="section" style="display:none;">
+            <h2>Column Mapping</h2>
+            <p>Map spreadsheet columns to system fields. First name, last name or full name, and DOB are required.</p>
+            <div id="mappingForm"></div>
+            <button class="primary" id="importButton">Import Data</button>
+          </div>
+
+          <div id="message" class="message" style="display:none;"></div>
+        </div>
+      </section>
+
+      <section id="visualizations" class="tab-content">
+        <div class="header-card">
+          <h2>Tableau Visualizations</h2>
+          <p>Placeholder area for embedded Tableau dashboards once the database is connected to Tableau.</p>
+        </div>
+
+        <div class="grid">
+          <div class="placeholder">
+            <h3>Program Dashboard</h3>
+            <p>Future Tableau embed showing active clients, program participation, entries, exits, and housing outcomes.</p>
+          </div>
+          <div class="placeholder">
+            <h3>Data Quality Dashboard</h3>
+            <p>Future Tableau embed showing duplicate records, missing DOBs, unmatched records, and import issues.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="ai" class="tab-content">
+        <div class="header-card">
+          <h2>AI Insights</h2>
+          <p>Placeholder area for future AI-assisted analytics after the SQL database and reporting layer are stable.</p>
+        </div>
+
+        <div class="panel">
+          <label for="aiQuestion">Ask a question about the data</label>
+          <textarea id="aiQuestion" rows="4" placeholder="Example: Which programs had the largest increase in active clients this quarter?"></textarea>
+          <button class="primary" disabled>AI Insights Coming Later</button>
+          <div class="message" style="display:block;">This tab is currently a placeholder. The AI assistant should query cleaned SQL data, not raw spreadsheets.</div>
+        </div>
+      </section>
+
+      <section id="clients" class="tab-content">
+        <div class="header-card">
+          <h2>Client Master Records</h2>
+          <p>Search and review NSV Client IDs created from imported records.</p>
+        </div>
+
+        <div class="panel">
+          <div class="grid">
+            <div>
+              <label for="clientSearch">Search clients</label>
+              <input id="clientSearch" placeholder="Search by name, DOB, or NSV ID" />
+            </div>
+            <div>
+              <label>&nbsp;</label>
+              <button class="primary" onclick="loadClients()">Refresh Clients</button>
+            </div>
+          </div>
+          <div id="clientsTable"></div>
+        </div>
+      </section>
+
+
+      <section id="reviews" class="tab-content">
+        <div class="header-card">
+          <h2>Review Queue</h2>
+          <p>Records that could not be safely matched automatically, such as name-only JotForm sign-ins or missing DOB rows.</p>
+        </div>
+
+        <div class="panel">
+          <button class="primary" onclick="loadReviews()">Refresh Review Queue</button>
+          <div id="reviewsTable"></div>
+        </div>
+      </section>
+
+      <section id="sources" class="tab-content">
+        <div class="header-card">
+          <h2>Data Sources</h2>
+          <p>Current CSV/report sources that feed the NSV data warehouse.</p>
+        </div>
+
+        <div class="panel">
+          <table>
+            <thead>
+              <tr><th>NSV Program</th><th>Data Report / Source</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Behavioral Health Services</td><td>eCW EBO 4.02</td></tr>
+              <tr><td>Bethany Women's Center</td><td>JotForm</td></tr>
+              <tr><td>Wellness Center</td><td>JotForm</td></tr>
+              <tr><td>Meal Service</td><td>Method in Progress</td></tr>
+              <tr><td>MMVC (Vocational Support)</td><td>Method in Progress</td></tr>
+              <tr><td>Sharon's Place</td><td>HMIS</td></tr>
+              <tr><td>Flagship Permanent Supportive Housing</td><td>HMIS</td></tr>
+              <tr><td>Shelter + Care</td><td>HMIS</td></tr>
+              <tr><td>Miriam's House</td><td>HMIS</td></tr>
+              <tr><td>Erna's House</td><td>HMIS / HTH</td></tr>
+              <tr><td>Capitol Vista</td><td>HTH</td></tr>
+              <tr><td>Phyllis Wheatley</td><td>HTH</td></tr>
+              <tr><td>Patricia Handy Place for Women LBS</td><td>HMIS</td></tr>
+              <tr><td>Patricia Handy Place for Women Senior Beds</td><td>HMIS</td></tr>
+              <tr><td>Patricia Handy Place for Women Work Beds</td><td>HMIS</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="settings" class="tab-content">
+        <div class="header-card">
+          <h2>Admin / Settings</h2>
+          <p>Placeholder for future configuration, permissions, audit logs, and import rules.</p>
+        </div>
+
+        <div class="grid">
+          <div class="placeholder">
+            <h3>Import Rules</h3>
+            <p>Future settings for column templates, source-specific mappings, and validation requirements.</p>
+          </div>
+          <div class="placeholder">
+            <h3>Security</h3>
+            <p>Future settings for login, user roles, access permissions, audit logs, and session timeout.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+  const programOptions = {
+    "eCW": ["Behavioral Health Services"],
+    "JotForm": ["Bethany Women's Center", "Wellness Center"],
+    "Method in Progress": ["Meal Service", "MMVC (Vocational Support)"],
+    "HMIS": [
+      "Sharon's Place",
+      "Flagship Permanent Supportive Housing",
+      "Shelter + Care",
+      "Miriam's House",
+      "Patricia Handy Place for Women LBS",
+      "Patricia Handy Place for Women Senior Beds",
+      "Patricia Handy Place for Women Work Beds"
+    ],
+    "HTH": ["Capitol Vista", "Phyllis Wheatley"],
+    "HMIS/HTH": ["Erna's House"]
+  };
+
+  function populatePrograms(source) {
+    const programSelect = document.getElementById("programName");
+    programSelect.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = source ? "Select program" : "Select a source first";
+    programSelect.appendChild(placeholder);
+
+    const programs = programOptions[source] || [];
+    programs.forEach(program => {
+      const option = document.createElement("option");
+      option.value = program;
+      option.textContent = program;
+      programSelect.appendChild(option);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    populatePrograms("");
+
+    const sourceSelect = document.getElementById("sourceSystem");
+    sourceSelect.addEventListener("change", function () {
+      populatePrograms(this.value);
+    });
+
+    loadStats();
+  });
+
+  document.querySelectorAll(".tab-button").forEach(button => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(section => section.classList.remove("active"));
+      button.classList.add("active");
+      document.getElementById(button.dataset.tab).classList.add("active");
+
+      if (button.dataset.tab === "overview") loadStats();
+      if (button.dataset.tab === "clients") loadClients();
+      if (button.dataset.tab === "reviews") loadReviews();
+    });
+  });
+
+  async function loadStats() {
+    try {
+      const response = await fetch("/stats");
+      const stats = await response.json();
+      document.getElementById("statClients").textContent = stats.clients ?? "0";
+      document.getElementById("statPrograms").textContent = stats.programs ?? "0";
+      document.getElementById("statImports").textContent = stats.imports ?? "0";
+      document.getElementById("statReviews").textContent = stats.reviews ?? "0";
+    } catch {
+      document.getElementById("statClients").textContent = "—";
+      document.getElementById("statPrograms").textContent = "—";
+      document.getElementById("statImports").textContent = "—";
+      document.getElementById("statReviews").textContent = "—";
+    }
+  }
+
+  async function loadClients() {
+    const table = document.getElementById("clientsTable");
+    table.innerHTML = "<p>Loading clients...</p>";
+
+    try {
+      const response = await fetch("/clients");
+      const clients = await response.json();
+
+      if (!clients.length) {
+        table.innerHTML = "<p>No clients imported yet.</p>";
+        return;
+      }
+
+      let html = "<table><thead><tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th></tr></thead><tbody>";
+      clients.forEach(c => {
+        html += `<tr><td>${c.nsv_client_id}</td><td>${c.first_name}</td><td>${c.last_name}</td><td>${c.date_of_birth}</td><td>${c.hmis_id ?? ""}</td><td>${c.ecw_id ?? ""}</td></tr>`;
+      });
+      html += "</tbody></table>";
+      table.innerHTML = html;
+    } catch {
+      table.innerHTML = "<p>Unable to load clients. Make sure the FastAPI backend and database are running.</p>";
+    }
+  }
+
+
+  async function loadReviews() {
+    const table = document.getElementById("reviewsTable");
+    table.innerHTML = "<p>Loading review queue...</p>";
+
+    try {
+      const response = await fetch("/reviews");
+      const reviews = await response.json();
+
+      if (!reviews.length) {
+        table.innerHTML = "<p>No records need review.</p>";
+        return;
+      }
+
+      let html = "<table><thead><tr><th>Review ID</th><th>Source</th><th>Program</th><th>Name</th><th>DOB</th><th>Possible NSV ID</th><th>Confidence</th><th>Reason</th></tr></thead><tbody>";
+      reviews.forEach(r => {
+        html += `<tr><td>${r.review_id}</td><td>${r.source_system}</td><td>${r.program_name ?? ""}</td><td>${r.suggested_first_name ?? ""} ${r.suggested_last_name ?? ""}</td><td>${r.suggested_dob ?? ""}</td><td>${r.possible_nsv_client_id ?? ""}</td><td>${r.confidence_score}</td><td>${r.review_reason}</td></tr>`;
+      });
+      html += "</tbody></table>";
+      table.innerHTML = html;
+    } catch {
+      table.innerHTML = "<p>Unable to load review queue. Make sure the FastAPI backend and database are running.</p>";
+    }
+  }
+
+  const dropZone = document.getElementById("dropZone");
+  const fileInput = document.getElementById("fileInput");
+  const previewSection = document.getElementById("previewSection");
+  const mappingSection = document.getElementById("mappingSection");
+  const fileInfo = document.getElementById("fileInfo");
+  const previewTable = document.getElementById("previewTable");
+  const mappingForm = document.getElementById("mappingForm");
+  const importButton = document.getElementById("importButton");
+  const message = document.getElementById("message");
+
+  let currentUploadId = null;
+
+  const systemFields = [
+    { value: "", label: "Do not import / ignore" },
+    { value: "first_name", label: "First Name" },
+    { value: "last_name", label: "Last Name" },
+    { value: "full_name", label: "Full Name" },
+    { value: "date_of_birth", label: "Date of Birth" },
+    { value: "hmis_id", label: "HMIS ID" },
+    { value: "ecw_id", label: "eCW ID" },
+    { value: "entry_date", label: "Entry Date" },
+    { value: "exit_date", label: "Exit Date" },
+    { value: "status", label: "Status" }
+  ];
+
+  dropZone.addEventListener("click", () => fileInput.click());
+
+  dropZone.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    dropZone.classList.add("dragover");
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("dragover");
+  });
+
+  dropZone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    dropZone.classList.remove("dragover");
+    const file = event.dataTransfer.files[0];
+    if (file) uploadPreview(file);
+  });
+
+  fileInput.addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (file) uploadPreview(file);
+  });
+
+  async function uploadPreview(file) {
+    showMessage("Uploading and reading preview...");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/upload/preview", {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      showMessage("Upload failed. Make sure the FastAPI backend is running.");
+      return;
+    }
+
+    const data = await response.json();
+
+    currentUploadId = data.upload_id;
+
+    renderPreview(data);
+    renderMapping(data.columns);
+
+    previewSection.style.display = "block";
+    mappingSection.style.display = "block";
+    showMessage("File preview loaded. Map the columns, then import.");
+  }
+
+  function renderPreview(data) {
+    fileInfo.innerHTML = `
+      <p><strong>File:</strong> ${data.file_name}</p>
+      <p><strong>Total rows:</strong> ${data.row_count}</p>
+    `;
+
+    if (data.rows.length === 0) {
+      previewTable.innerHTML = "<p>No rows found.</p>";
+      return;
+    }
+
+    let html = "<table><thead><tr>";
+    data.columns.forEach(col => html += `<th>${col}</th>`);
+    html += "</tr></thead><tbody>";
+
+    data.rows.forEach(row => {
+      html += "<tr>";
+      data.columns.forEach(col => {
+        html += `<td>${row[col] ?? ""}</td>`;
+      });
+      html += "</tr>";
+    });
+
+    html += "</tbody></table>";
+    previewTable.innerHTML = html;
+  }
+
+  function guessField(columnName) {
+    const c = columnName.toLowerCase().trim();
+
+    if (["first name", "firstname", "client first name"].includes(c)) return "first_name";
+    if (["last name", "lastname", "client last name"].includes(c)) return "last_name";
+    if (["full name", "client name", "name"].includes(c)) return "full_name";
+    if (["dob", "date of birth", "birth date"].includes(c)) return "date_of_birth";
+    if (["hmis id", "hmis_id", "personal id"].includes(c)) return "hmis_id";
+    if (["ecw id", "ecw_id", "patient id"].includes(c)) return "ecw_id";
+    if (["entry date", "start date"].includes(c)) return "entry_date";
+    if (["exit date", "end date"].includes(c)) return "exit_date";
+    if (["status", "client status"].includes(c)) return "status";
+
+    return "";
+  }
+
+  function renderMapping(columns) {
+    let html = "<table><thead><tr><th>Spreadsheet Column</th><th>Map To</th></tr></thead><tbody>";
+
+    columns.forEach(col => {
+      html += `<tr><td>${col}</td><td><select data-column="${col}">`;
+
+      const guessed = guessField(col);
+
+      systemFields.forEach(field => {
+        const selected = field.value === guessed ? "selected" : "";
+        html += `<option value="${field.value}" ${selected}>${field.label}</option>`;
+      });
+
+      html += "</select></td></tr>";
+    });
+
+    html += "</tbody></table>";
+    mappingForm.innerHTML = html;
+  }
+
+  importButton.addEventListener("click", async () => {
+    const sourceSystem = document.getElementById("sourceSystem").value;
+    const programName = document.getElementById("programName").value.trim();
+
+    if (!currentUploadId) {
+      showMessage("Please upload a file first.");
+      return;
+    }
+
+    if (!sourceSystem || !programName) {
+      showMessage("Please enter both source system and program name.");
+      return;
+    }
+
+    const selects = mappingForm.querySelectorAll("select");
+    const columnMapping = {};
+
+    selects.forEach(select => {
+      const sourceColumn = select.getAttribute("data-column");
+      const targetField = select.value;
+      if (targetField) {
+        columnMapping[sourceColumn] = targetField;
+      }
+    });
+
+    showMessage("Importing data...");
+
+    const response = await fetch("/upload/import", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        upload_id: currentUploadId,
+        source_system: sourceSystem,
+        program_name: programName,
+        column_mapping: columnMapping
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      showMessage("Import failed: " + JSON.stringify(result, null, 2));
+      return;
+    }
+
+    showMessage(
+      `Import complete.\n\n` +
+      `Rows processed: ${result.rows_processed}\n` +
+      `New clients created: ${result.rows_created}\n` +
+      `Existing clients matched: ${result.rows_matched}\n` +
+      `Rows needing review: ${result.rows_review}\n` +
+      `Rows failed: ${result.rows_failed}`
+    );
+
+    loadStats();
+  });
+
+  function showMessage(text) {
+    message.style.display = "block";
+    message.textContent = text;
+  }
+</script>
+</body>
+</html>
