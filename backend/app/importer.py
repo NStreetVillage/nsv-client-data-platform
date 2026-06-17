@@ -25,7 +25,7 @@ DEFAULT_COLUMN_ALIASES = {
     ],
     "date_of_birth": [
         "date_of_birth", "dob", "birth date", "date of birth", "client dob",
-        "patient dob", "patient date of birth"
+        "patient dob", "patient date of birth", "date of birth.1"
     ],
     "hmis_id": [
         "hmis_id", "hmis id", "hmisid", "personal id", "personalid", "client id",
@@ -47,12 +47,12 @@ DEFAULT_COLUMN_ALIASES = {
     "status": [
         "status", "client status", "program status", "housed", "exited"
     ],
-    "gender": ["gender", "sex", "client gender", "patient gender"],
-    "race": ["race", "client race", "patient race"],
+    "gender": ["gender", "sex", "client gender", "patient gender", "gender (retired)"],
+    "race": ["race", "client race", "patient race", "primary race"],
     "ethnicity": ["ethnicity", "client ethnicity", "patient ethnicity"],
-    "veteran_status": ["veteran status", "veteran", "client veteran status"],
-    "encounter_date": ["appointment date", "encounter date", "visit date", "service date"],
-    "provider": ["provider", "provider name", "case worker", "caseworker"]
+    "veteran_status": ["veteran status", "veteran", "client veteran status", "are you a military veteran?"],
+    "encounter_date": ["appointment date", "encounter date", "visit date", "service date", "submission date", "date of intake"],
+    "provider": ["provider", "provider name", "case worker", "caseworker", "appointment provider name", "resource provider name"]
 }
 
 
@@ -78,6 +78,45 @@ SOURCE_DETAIL_FIELDS = {
     "Move type": "move_type",
     "DCHA Application Status": "dcha_application_status",
     "# of days in PSH since referral": "days_in_psh_since_referral",
+    "Source App": "source_app",
+    "What can we help you with today?": "services_requested",
+    "Are there any other services you would like to access at N Street Village?": "other_services_requested",
+    "Are you receiving SNAP ?": "snap_status",
+    "Are you a DC Resident?": "dc_resident",
+    "Are you an NSV Resident?": "nsv_resident",
+    "NSV Program": "nsv_program",
+    "Primary Language": "primary_language",
+    "Current Housing": "current_housing",
+    "Staff Completing Form": "staff_completing_form",
+    "Encounter ID": "encounter_id",
+    "Visit Type": "visit_type",
+    "Visit Status": "visit_status",
+    "Visit Reason": "visit_reason",
+    "Department Name": "department_name",
+    "Practice Name": "practice_name",
+    "Appointment Facility Name": "appointment_facility_name",
+    "Appointment Provider Name": "appointment_provider_name",
+    "Project": "project",
+    "Entry Type": "entry_type",
+    "Exit Destination": "exit_destination",
+    "Household ID": "household_id",
+    "Relationship to Head of Household": "relationship_to_head_of_household",
+}
+
+CORE_FIELDS = {
+    "first_name",
+    "last_name",
+    "full_name",
+    "date_of_birth",
+    "hmis_id",
+    "ecw_id",
+    "entry_date",
+    "exit_date",
+    "status",
+    "gender",
+    "race",
+    "ethnicity",
+    "veteran_status",
 }
 
 
@@ -92,18 +131,43 @@ def safe_str(value):
 
 def load_file(path: Path) -> pd.DataFrame:
     if path.suffix.lower() == ".csv":
-        # eCW exports are often UTF-16. Try common encodings.
         for encoding in ["utf-8-sig", "utf-16", "latin1"]:
             try:
-                return pd.read_csv(path, encoding=encoding)
+                return pd.read_csv(path, encoding=encoding, sep=None, engine="python")
             except Exception:
                 continue
-        return pd.read_csv(path)
+        return pd.read_csv(path, sep=None, engine="python")
 
     if path.suffix.lower() in [".xlsx", ".xls"]:
-        return pd.read_excel(path)
+        return read_best_excel_sheet(path)
 
     raise ValueError("Only CSV and Excel files are currently supported.")
+
+
+def score_identity_columns(columns) -> int:
+    normalized = {str(c).strip().lower() for c in columns}
+    score = 0
+    for aliases in DEFAULT_COLUMN_ALIASES.values():
+        if any(alias in normalized for alias in aliases):
+            score += 1
+    return score
+
+
+def read_best_excel_sheet(path: Path) -> pd.DataFrame:
+    sheets = pd.read_excel(path, sheet_name=None)
+    best_sheet = None
+    best_score = -1
+
+    for sheet in sheets.values():
+        score = score_identity_columns(sheet.columns)
+        if score > best_score:
+            best_sheet = sheet
+            best_score = score
+
+    if best_sheet is None:
+        raise ValueError("Excel workbook does not contain a readable sheet.")
+
+    return best_sheet
 
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -196,26 +260,66 @@ def find_name_only_candidates(db: Session, first_name: str, last_name: str):
     if not first_name or not last_name:
         return []
 
+    candidates = (
+        db.query(Client)
+        .filter(Client.first_name.ilike(first_name), Client.last_name.ilike(last_name))
+        .limit(5)
+        .all()
+    )
+    matches = []
+    for client in candidates:
+        if (
+            normalize_for_match(client.first_name) == normalize_for_match(first_name)
+            and normalize_for_match(client.last_name) == normalize_for_match(last_name)
+        ):
+            matches.append(client)
+
+    return matches
+
+
+def find_by_partial_identity(db: Session, first_name: str, last_name: str, dob):
+    if not first_name and not last_name and not dob:
+        return []
+
+    filters = []
+    if dob:
+        filters.append(Client.date_of_birth == dob)
+    if first_name:
+        filters.append(Client.first_name.ilike(first_name))
+    if last_name:
+        filters.append(Client.last_name.ilike(last_name))
+
+    candidates = db.query(Client).filter(or_(*filters)).limit(10).all()
+    matches = []
     nf = normalize_for_match(first_name)
     nl = normalize_for_match(last_name)
 
-    candidates = db.query(Client).all()
-    matches = []
     for client in candidates:
-        if normalize_for_match(client.first_name) == nf and normalize_for_match(client.last_name) == nl:
+        first_matches = nf and normalize_for_match(client.first_name) == nf
+        last_matches = nl and normalize_for_match(client.last_name) == nl
+        dob_matches = dob and client.date_of_birth == dob
+
+        if dob_matches and (first_matches or last_matches):
             matches.append(client)
 
     return matches
 
 
 def extract_identity(row):
-    if "full_name" in row and pd.notna(row.get("full_name")) and safe_str(row.get("full_name")):
-        first_name, last_name = split_full_name(row.get("full_name"))
+    full_name = (
+        safe_str(row.get("full_name")) if "full_name" in row else None
+    ) or get_first_present_value(row, ["Client Name", "Patient Name", "Preferred Name", "Name"])
+
+    if full_name:
+        first_name, last_name = split_full_name(full_name)
     else:
         first_name = clean_name(row.get("first_name", ""))
         last_name = clean_name(row.get("last_name", ""))
 
     dob = parse_date(row.get("date_of_birth", None))
+    if not dob:
+        dob = parse_date(get_first_present_value(row, ["Date of Birth.1", "Patient DOB"]))
+
     hmis_id = safe_str(row.get("hmis_id")) if "hmis_id" in row else None
     ecw_id = safe_str(row.get("ecw_id")) if "ecw_id" in row else None
 
@@ -259,6 +363,7 @@ def extract_status(row):
 
 def add_source_details(db, row, client, source_system, program_name, path):
     normalized_columns = {str(column).strip().lower(): column for column in row.index}
+    captured_columns = set()
 
     for source_column, field_name in SOURCE_DETAIL_FIELDS.items():
         actual_column = normalized_columns.get(source_column.lower())
@@ -278,6 +383,7 @@ def add_source_details(db, row, client, source_system, program_name, path):
             field_value=value,
             original_file=path.name,
         ))
+        captured_columns.add(actual_column)
 
 
 def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
@@ -286,8 +392,9 @@ def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
     1. HMIS ID match
     2. eCW ID match
     3. Name + DOB match
-    4. Name-only possible match review
-    5. Create new client if name + DOB exists but no match
+    4. Unique name-only match
+    5. Partial DOB + name match
+    6. Create partial client when enough identity data exists
     """
 
     client = find_by_hmis_id(db, hmis_id)
@@ -303,15 +410,21 @@ def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
         return client, "Name + DOB", 0.95, "matched"
 
     name_candidates = find_name_only_candidates(db, first_name, last_name)
-    if name_candidates and not dob:
-        # This is common for sign-in sheets that have name but no DOB.
-        return name_candidates[0], "Name only review", 0.60, "review"
+    if len(name_candidates) == 1:
+        return name_candidates[0], "Name only", 0.75, "matched"
+
+    partial_candidates = find_by_partial_identity(db, first_name, last_name, dob)
+    if len(partial_candidates) == 1:
+        return partial_candidates[0], "Partial identity", 0.70, "matched"
 
     if not first_name or not last_name:
         return None, "Missing name", 0.00, "failed"
 
+    if len(name_candidates) > 1:
+        return name_candidates[0], "Multiple name matches", 0.50, "review"
+
     if not dob:
-        return None, "Missing DOB review", 0.40, "review"
+        return None, "New partial client", 0.60, "create"
 
     return None, "New client", 0.90, "create"
 
@@ -334,6 +447,18 @@ def create_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id, row)
     db.commit()
     db.refresh(client)
     return client
+
+
+def update_client_from_row(client, hmis_id, ecw_id, row):
+    if hmis_id and not client.hmis_id:
+        client.hmis_id = hmis_id
+    if ecw_id and not client.ecw_id:
+        client.ecw_id = ecw_id
+
+    for field in ["gender", "race", "ethnicity", "veteran_status"]:
+        value = safe_str(row.get(field)) if field in row else None
+        if value and not getattr(client, field):
+            setattr(client, field, value)
 
 
 def add_review_record(db, row, source_system, program_name, path, possible_client, first_name, last_name, dob, confidence, reason):
@@ -408,11 +533,7 @@ def import_file(
                 rows_created += 1
             else:
                 rows_matched += 1
-                # Fill in missing cross-system IDs when a confident match exists.
-                if hmis_id and not client.hmis_id:
-                    client.hmis_id = hmis_id
-                if ecw_id and not client.ecw_id:
-                    client.ecw_id = ecw_id
+                update_client_from_row(client, hmis_id, ecw_id, row)
                 db.commit()
 
             source_client_id = hmis_id or ecw_id

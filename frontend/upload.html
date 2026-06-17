@@ -774,17 +774,17 @@
 
     if (["first name", "firstname", "client first name"].includes(c)) return "first_name";
     if (["last name", "lastname", "client last name"].includes(c)) return "last_name";
-    if (["full name", "client name", "name", "client full name", "patient name"].includes(c)) return "full_name";
-    if (["dob", "date of birth", "birth date"].includes(c)) return "date_of_birth";
+    if (["full name", "client name", "name", "client full name", "patient name", "preferred name"].includes(c)) return "full_name";
+    if (["dob", "date of birth", "date of birth.1", "birth date", "patient dob"].includes(c)) return "date_of_birth";
     if (["hmis id", "hmis_id", "personal id", "dhs client id# - hmis id"].includes(c)) return "hmis_id";
     if (["ecw id", "ecw_id", "patient id", "patient acct no"].includes(c)) return "ecw_id";
     if (["gender", "sex", "patient gender"].includes(c)) return "gender";
     if (["race", "primary race", "patient race"].includes(c)) return "race";
     if (["ethnicity", "patient ethnicity"].includes(c)) return "ethnicity";
     if (["veteran status", "are you a military veteran?"].includes(c)) return "veteran_status";
-    if (["entry date", "start date", "current lease-up date", "date placed in psh", "date placed in psh (formula)"].includes(c)) return "entry_date";
-    if (["exit date", "end date"].includes(c)) return "exit_date";
-    if (["status", "client status", "housed", "exited"].includes(c)) return "status";
+    if (["entry date", "start date", "current lease-up date", "date placed in psh", "date placed in psh (formula)", "admission date", "appointment date", "submission date", "date of intake"].includes(c)) return "entry_date";
+    if (["exit date", "end date", "discharge date"].includes(c)) return "exit_date";
+    if (["status", "client status", "patient status", "visit status", "housed", "exited"].includes(c)) return "status";
 
     return "";
   }
