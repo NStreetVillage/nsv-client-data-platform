@@ -38,10 +38,10 @@ def get_db():
 def root():
     return {"message": "NSV Client Data Platform API is running"}
 
-
 @app.get("/upload-page")
 def upload_page():
-    return FileResponse("frontend/upload.html")
+    project_root = Path(__file__).resolve().parents[2]
+    return FileResponse(project_root / "frontend" / "upload.html")
 
 
 @app.get("/clients", response_model=list[ClientOut])
