@@ -10,6 +10,10 @@ from .models import Client, Program, ClientSource, SourceDetail, Enrollment, Imp
 from .utils import clean_name, normalize_for_match, parse_date, generate_nsv_id, split_full_name
 
 
+class UnsupportedClientImportError(ValueError):
+    pass
+
+
 DEFAULT_COLUMN_ALIASES = {
     "first_name": [
         "first_name", "first name", "firstname", "client first name", "patient first name",
@@ -133,15 +137,51 @@ def load_file(path: Path) -> pd.DataFrame:
     if path.suffix.lower() == ".csv":
         for encoding in ["utf-8-sig", "utf-16", "latin1"]:
             try:
-                return pd.read_csv(path, encoding=encoding, sep=None, engine="python")
+                df = pd.read_csv(path, encoding=encoding, sep=None, engine="python")
+                return normalize_csv_layout(df)
+            except UnsupportedClientImportError:
+                raise
             except Exception:
                 continue
-        return pd.read_csv(path, sep=None, engine="python")
+        return normalize_csv_layout(pd.read_csv(path, sep=None, engine="python"))
 
     if path.suffix.lower() in [".xlsx", ".xls"]:
         return read_best_excel_sheet(path)
 
     raise ValueError("Only CSV and Excel files are currently supported.")
+
+
+def normalize_csv_layout(df: pd.DataFrame) -> pd.DataFrame:
+    normalized_columns = {str(c).strip().lower() for c in df.columns}
+
+    if {"program", "target", "metric", "method"}.issubset(normalized_columns):
+        raise UnsupportedClientImportError(
+            "This looks like a program metrics/planning file, not a client import file."
+        )
+
+    if score_identity_columns(df.columns) > 0:
+        return df
+
+    for row_index, row in df.head(10).iterrows():
+        values = [safe_str(value) for value in row.tolist()]
+        normalized_values = {value.strip().lower() for value in values if value}
+
+        if "hmis id" not in normalized_values:
+            continue
+
+        new_columns = []
+        for index, value in enumerate(values):
+            if value:
+                new_columns.append(value)
+            else:
+                new_columns.append(f"Unnamed: {index}")
+
+        cleaned = df.iloc[row_index + 1:].copy()
+        cleaned.columns = new_columns
+        cleaned = cleaned.dropna(how="all")
+        return cleaned.reset_index(drop=True)
+
+    return df
 
 
 def score_identity_columns(columns) -> int:
