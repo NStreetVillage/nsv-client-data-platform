@@ -184,6 +184,16 @@
       cursor: not-allowed;
     }
 
+    button.secondary {
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: white;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: bold;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -379,6 +389,7 @@
             </div>
           </div>
           <div id="clientsTable"></div>
+          <div id="clientProfile" class="section" style="display:none;"></div>
         </div>
       </section>
 
@@ -525,25 +536,104 @@
 
   async function loadClients() {
     const table = document.getElementById("clientsTable");
+    const profile = document.getElementById("clientProfile");
     table.innerHTML = "<p>Loading clients...</p>";
+    profile.style.display = "none";
 
     try {
       const response = await fetch("/clients");
-      const clients = await response.json();
+      let clients = await response.json();
+      const search = document.getElementById("clientSearch").value.trim().toLowerCase();
+
+      if (search) {
+        clients = clients.filter(c => {
+          const haystack = [
+            c.nsv_client_id,
+            c.first_name,
+            c.last_name,
+            c.date_of_birth,
+            c.hmis_id,
+            c.ecw_id
+          ].filter(Boolean).join(" ").toLowerCase();
+          return haystack.includes(search);
+        });
+      }
 
       if (!clients.length) {
-        table.innerHTML = "<p>No clients imported yet.</p>";
+        table.innerHTML = "<p>No matching clients found.</p>";
         return;
       }
 
-      let html = "<table><thead><tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th></tr></thead><tbody>";
+      let html = "<table><thead><tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th><th>Profile</th></tr></thead><tbody>";
       clients.forEach(c => {
-        html += `<tr><td>${c.nsv_client_id}</td><td>${c.first_name}</td><td>${c.last_name}</td><td>${c.date_of_birth}</td><td>${c.hmis_id ?? ""}</td><td>${c.ecw_id ?? ""}</td></tr>`;
+        html += `<tr><td>${escapeHtml(c.nsv_client_id)}</td><td>${escapeHtml(c.first_name)}</td><td>${escapeHtml(c.last_name)}</td><td>${escapeHtml(c.date_of_birth ?? "")}</td><td>${escapeHtml(c.hmis_id ?? "")}</td><td>${escapeHtml(c.ecw_id ?? "")}</td><td><button class="secondary" onclick="viewClientProfile('${escapeHtml(c.nsv_client_id)}')">View</button></td></tr>`;
       });
       html += "</tbody></table>";
       table.innerHTML = html;
     } catch {
       table.innerHTML = "<p>Unable to load clients. Make sure the FastAPI backend and database are running.</p>";
+    }
+  }
+
+  async function viewClientProfile(nsvClientId) {
+    const profile = document.getElementById("clientProfile");
+    profile.style.display = "block";
+    profile.innerHTML = "<p>Loading client profile...</p>";
+
+    try {
+      const [clientResponse, programsResponse, detailsResponse] = await Promise.all([
+        fetch(`/clients/${encodeURIComponent(nsvClientId)}`),
+        fetch(`/clients/${encodeURIComponent(nsvClientId)}/programs`),
+        fetch(`/clients/${encodeURIComponent(nsvClientId)}/details`)
+      ]);
+
+      const client = await clientResponse.json();
+      const programs = await programsResponse.json();
+      const detailPayload = await detailsResponse.json();
+      const sources = detailPayload.sources || [];
+      const details = detailPayload.details || [];
+
+      let html = `
+        <h2>Client Profile</h2>
+        <p><strong>${escapeHtml(client.nsv_client_id)}</strong> ${escapeHtml(client.first_name)} ${escapeHtml(client.last_name)} ${client.date_of_birth ? `DOB: ${escapeHtml(client.date_of_birth)}` : ""}</p>
+        <h3>Programs</h3>
+      `;
+
+      if (programs.length) {
+        html += "<table><thead><tr><th>Program</th><th>Source</th><th>Entry Date</th><th>Exit Date</th><th>Status</th></tr></thead><tbody>";
+        programs.forEach(program => {
+          html += `<tr><td>${escapeHtml(program.program_name)}</td><td>${escapeHtml(program.source_system)}</td><td>${escapeHtml(program.entry_date ?? "")}</td><td>${escapeHtml(program.exit_date ?? "")}</td><td>${escapeHtml(program.status ?? "")}</td></tr>`;
+        });
+        html += "</tbody></table>";
+      } else {
+        html += "<p>No program records found.</p>";
+      }
+
+      html += "<h3>Connected Sources</h3>";
+      if (sources.length) {
+        html += "<table><thead><tr><th>Source</th><th>Source Client ID</th><th>Match Method</th><th>Confidence</th><th>File</th></tr></thead><tbody>";
+        sources.forEach(source => {
+          html += `<tr><td>${escapeHtml(source.source_system)}</td><td>${escapeHtml(source.source_client_id ?? "")}</td><td>${escapeHtml(source.match_method ?? "")}</td><td>${escapeHtml(source.confidence_score ?? "")}</td><td>${escapeHtml(source.original_file ?? "")}</td></tr>`;
+        });
+        html += "</tbody></table>";
+      } else {
+        html += "<p>No source records found.</p>";
+      }
+
+      html += "<h3>Source Details</h3>";
+      if (details.length) {
+        html += "<table><thead><tr><th>Source</th><th>Program</th><th>Field</th><th>Value</th></tr></thead><tbody>";
+        details.slice(0, 50).forEach(detail => {
+          html += `<tr><td>${escapeHtml(detail.source_system)}</td><td>${escapeHtml(detail.program_name ?? "")}</td><td>${escapeHtml(detail.field_name)}</td><td>${escapeHtml(detail.field_value ?? "")}</td></tr>`;
+        });
+        html += "</tbody></table>";
+      } else {
+        html += "<p>No source details found.</p>";
+      }
+
+      profile.innerHTML = html;
+    } catch {
+      profile.innerHTML = "<p>Unable to load client profile. Make sure the backend and database are running.</p>";
     }
   }
 
@@ -592,6 +682,10 @@
     { value: "date_of_birth", label: "Date of Birth" },
     { value: "hmis_id", label: "HMIS ID" },
     { value: "ecw_id", label: "eCW ID" },
+    { value: "gender", label: "Gender" },
+    { value: "race", label: "Race" },
+    { value: "ethnicity", label: "Ethnicity" },
+    { value: "veteran_status", label: "Veteran Status" },
     { value: "entry_date", label: "Entry Date" },
     { value: "exit_date", label: "Exit Date" },
     { value: "status", label: "Status" }
@@ -680,15 +774,28 @@
 
     if (["first name", "firstname", "client first name"].includes(c)) return "first_name";
     if (["last name", "lastname", "client last name"].includes(c)) return "last_name";
-    if (["full name", "client name", "name"].includes(c)) return "full_name";
+    if (["full name", "client name", "name", "client full name", "patient name"].includes(c)) return "full_name";
     if (["dob", "date of birth", "birth date"].includes(c)) return "date_of_birth";
-    if (["hmis id", "hmis_id", "personal id"].includes(c)) return "hmis_id";
-    if (["ecw id", "ecw_id", "patient id"].includes(c)) return "ecw_id";
-    if (["entry date", "start date"].includes(c)) return "entry_date";
+    if (["hmis id", "hmis_id", "personal id", "dhs client id# - hmis id"].includes(c)) return "hmis_id";
+    if (["ecw id", "ecw_id", "patient id", "patient acct no"].includes(c)) return "ecw_id";
+    if (["gender", "sex", "patient gender"].includes(c)) return "gender";
+    if (["race", "primary race", "patient race"].includes(c)) return "race";
+    if (["ethnicity", "patient ethnicity"].includes(c)) return "ethnicity";
+    if (["veteran status", "are you a military veteran?"].includes(c)) return "veteran_status";
+    if (["entry date", "start date", "current lease-up date", "date placed in psh", "date placed in psh (formula)"].includes(c)) return "entry_date";
     if (["exit date", "end date"].includes(c)) return "exit_date";
-    if (["status", "client status"].includes(c)) return "status";
+    if (["status", "client status", "housed", "exited"].includes(c)) return "status";
 
     return "";
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
   function renderMapping(columns) {

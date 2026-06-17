@@ -6,7 +6,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
-from .models import Client, Program, ClientSource, Enrollment, ImportLog, PotentialMatch
+from .models import Client, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch
 from .utils import clean_name, normalize_for_match, parse_date, generate_nsv_id, split_full_name
 
 
@@ -29,7 +29,7 @@ DEFAULT_COLUMN_ALIASES = {
     ],
     "hmis_id": [
         "hmis_id", "hmis id", "hmisid", "personal id", "personalid", "client id",
-        "unique id"
+        "unique id", "dhs client id# - hmis id"
     ],
     "ecw_id": [
         "ecw_id", "ecw id", "patient id", "patient acct no", "patient account no",
@@ -37,7 +37,8 @@ DEFAULT_COLUMN_ALIASES = {
     ],
     "entry_date": [
         "entry_date", "entry date", "start date", "program entry date", "project start",
-        "admission date"
+        "admission date", "current lease-up date", "date placed in psh",
+        "date placed in psh (formula)"
     ],
     "exit_date": [
         "exit_date", "exit date", "end date", "program exit date", "project exit",
@@ -52,6 +53,31 @@ DEFAULT_COLUMN_ALIASES = {
     "veteran_status": ["veteran status", "veteran", "client veteran status"],
     "encounter_date": ["appointment date", "encounter date", "visit date", "service date"],
     "provider": ["provider", "provider name", "case worker", "caseworker"]
+}
+
+
+SOURCE_DETAIL_FIELDS = {
+    "Program": "program",
+    "Provider Name": "provider_name",
+    "Full Provider Name": "full_provider_name",
+    "Funding Source": "funding_source",
+    "Referral Source": "referral_source",
+    "Current Lease Up/Unit Address": "current_lease_up_unit_address",
+    "Current Lease-up Date": "current_lease_up_date",
+    "Date Placed in PSH": "date_placed_in_psh",
+    "Date Placed in PSH (Formula)": "date_placed_in_psh_formula",
+    "Housed": "housed",
+    "Exited": "exited",
+    "Reason for Exit": "reason_for_exit",
+    "UNIT AVAILABILITY": "unit_availability",
+    "Unit Lease-ups": "unit_lease_ups",
+    "Type of Voucher": "type_of_voucher",
+    "Date Voucher Issued2": "date_voucher_issued",
+    "Date Referred to DHS Housing Matching Team": "date_referred_to_dhs_housing_matching_team",
+    "Date of Match to Program": "date_of_match_to_program",
+    "Move type": "move_type",
+    "DCHA Application Status": "dcha_application_status",
+    "# of days in PSH since referral": "days_in_psh_since_referral",
 }
 
 
@@ -94,8 +120,22 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_column_mapping(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFrame:
-    clean_mapping = {source: target for source, target in mapping.items() if target}
+    clean_mapping = {}
+    used_targets = set()
+
+    for source, target in mapping.items():
+        if not target or target in used_targets:
+            continue
+        clean_mapping[source] = target
+        used_targets.add(target)
+
     return df.rename(columns=clean_mapping)
+
+
+def normalize_import_columns(df: pd.DataFrame, mapping: Optional[Dict[str, str]] = None) -> pd.DataFrame:
+    if mapping:
+        df = apply_column_mapping(df, mapping)
+    return normalize_columns(df)
 
 
 def get_next_client_number(db: Session) -> int:
@@ -182,6 +222,64 @@ def extract_identity(row):
     return first_name, last_name, dob, hmis_id, ecw_id
 
 
+def get_first_present_value(row, column_names):
+    for column_name in column_names:
+        if column_name in row:
+            value = safe_str(row.get(column_name))
+            if value:
+                return value
+    return None
+
+
+def extract_enrollment_dates(row):
+    entry_date = parse_date(row.get("entry_date", None)) if "entry_date" in row else None
+    exit_date = parse_date(row.get("exit_date", None)) if "exit_date" in row else None
+
+    if not entry_date:
+        entry_date = parse_date(get_first_present_value(row, [
+            "Current Lease-up Date",
+            "Date Placed in PSH",
+            "Date Placed in PSH (Formula)",
+        ]))
+
+    return entry_date, exit_date
+
+
+def extract_status(row):
+    status = safe_str(row.get("status")) if "status" in row else None
+    housed = get_first_present_value(row, ["Housed", "housed"])
+    exited = get_first_present_value(row, ["Exited", "exited"])
+
+    if exited and exited.lower() in ["yes", "y", "true", "1"]:
+        return "Exited"
+    if housed and housed.lower() in ["yes", "y", "true", "1"]:
+        return "Housed"
+    return status
+
+
+def add_source_details(db, row, client, source_system, program_name, path):
+    normalized_columns = {str(column).strip().lower(): column for column in row.index}
+
+    for source_column, field_name in SOURCE_DETAIL_FIELDS.items():
+        actual_column = normalized_columns.get(source_column.lower())
+        if not actual_column:
+            continue
+
+        value = safe_str(row.get(actual_column))
+        if not value:
+            continue
+
+        db.add(SourceDetail(
+            nsv_client_id=client.nsv_client_id,
+            source_system=source_system,
+            program_name=program_name,
+            detail_type="HTH Housing" if source_system.upper() == "HTH" else "Source Metadata",
+            field_name=field_name,
+            field_value=value,
+            original_file=path.name,
+        ))
+
+
 def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
     """
     Matching hierarchy:
@@ -264,11 +362,7 @@ def import_file(
 ):
     path = Path(file_path)
     df = load_file(path)
-
-    if column_mapping:
-        df = apply_column_mapping(df, column_mapping)
-    else:
-        df = normalize_columns(df)
+    df = normalize_import_columns(df, column_mapping)
 
     rows_processed = 0
     rows_created = 0
@@ -333,9 +427,10 @@ def import_file(
                 confidence_score=confidence,
             ))
 
-            entry_date = parse_date(row.get("entry_date", None)) if "entry_date" in row else None
-            exit_date = parse_date(row.get("exit_date", None)) if "exit_date" in row else None
-            status = safe_str(row.get("status")) if "status" in row else None
+            add_source_details(db, row, client, source_system, program_name, path)
+
+            entry_date, exit_date = extract_enrollment_dates(row)
+            status = extract_status(row)
 
             db.add(Enrollment(
                 nsv_client_id=client.nsv_client_id,

@@ -25,6 +25,7 @@ class Client(Base):
 
     sources = relationship("ClientSource", back_populates="client")
     enrollments = relationship("Enrollment", back_populates="client")
+    source_details = relationship("SourceDetail", back_populates="client")
 
 
 class Program(Base):
@@ -51,6 +52,22 @@ class ClientSource(Base):
     imported_at = Column(DateTime(timezone=True), server_default=func.now())
 
     client = relationship("Client", back_populates="sources")
+
+
+class SourceDetail(Base):
+    __tablename__ = "source_details"
+
+    detail_id = Column(Integer, primary_key=True, autoincrement=True)
+    nsv_client_id = Column(String(30), ForeignKey("clients.nsv_client_id"), nullable=False)
+    source_system = Column(String(100), nullable=False)
+    program_name = Column(String(255), nullable=True)
+    detail_type = Column(String(100), nullable=True)
+    field_name = Column(String(255), nullable=False)
+    field_value = Column(Text, nullable=True)
+    original_file = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    client = relationship("Client", back_populates="source_details")
 
 
 class Enrollment(Base):

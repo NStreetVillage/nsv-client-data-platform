@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .database import SessionLocal
-from .models import Client, Program, ImportLog, PotentialMatch
+from .models import Client, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch
 from .schemas import ClientOut
 from .importer import preview_file, import_file
 
@@ -47,6 +47,87 @@ def upload_page():
 @app.get("/clients", response_model=list[ClientOut])
 def get_clients(db: Session = Depends(get_db)):
     return db.query(Client).limit(100).all()
+
+
+@app.get("/clients/{nsv_client_id}", response_model=ClientOut)
+def get_client(nsv_client_id: str, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.nsv_client_id == nsv_client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found.")
+    return client
+
+
+@app.get("/clients/{nsv_client_id}/programs")
+def get_client_programs(nsv_client_id: str, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.nsv_client_id == nsv_client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found.")
+
+    enrollments = (
+        db.query(Enrollment, Program)
+        .join(Program, Enrollment.program_id == Program.program_id)
+        .filter(Enrollment.nsv_client_id == nsv_client_id)
+        .order_by(Enrollment.created_at.desc())
+        .all()
+    )
+
+    return [
+        {
+            "program_id": program.program_id,
+            "program_name": program.program_name,
+            "source_system": program.source_system,
+            "entry_date": str(enrollment.entry_date) if enrollment.entry_date else None,
+            "exit_date": str(enrollment.exit_date) if enrollment.exit_date else None,
+            "status": enrollment.status,
+        }
+        for enrollment, program in enrollments
+    ]
+
+
+@app.get("/clients/{nsv_client_id}/details")
+def get_client_details(nsv_client_id: str, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.nsv_client_id == nsv_client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found.")
+
+    sources = (
+        db.query(ClientSource)
+        .filter(ClientSource.nsv_client_id == nsv_client_id)
+        .order_by(ClientSource.imported_at.desc())
+        .all()
+    )
+    details = (
+        db.query(SourceDetail)
+        .filter(SourceDetail.nsv_client_id == nsv_client_id)
+        .order_by(SourceDetail.created_at.desc())
+        .all()
+    )
+
+    return {
+        "sources": [
+            {
+                "source_system": source.source_system,
+                "source_client_id": source.source_client_id,
+                "original_file": source.original_file,
+                "match_method": source.match_method,
+                "confidence_score": source.confidence_score,
+                "imported_at": str(source.imported_at) if source.imported_at else None,
+            }
+            for source in sources
+        ],
+        "details": [
+            {
+                "source_system": detail.source_system,
+                "program_name": detail.program_name,
+                "detail_type": detail.detail_type,
+                "field_name": detail.field_name,
+                "field_value": detail.field_value,
+                "original_file": detail.original_file,
+                "created_at": str(detail.created_at) if detail.created_at else None,
+            }
+            for detail in details
+        ],
+    }
 
 
 @app.get("/programs")
