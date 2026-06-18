@@ -143,7 +143,7 @@
 
     .grid-3 {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 18px;
     }
 
@@ -194,6 +194,19 @@
       font-weight: bold;
     }
 
+    .pager {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .pager span {
+      color: var(--muted);
+      font-weight: bold;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -226,6 +239,116 @@
       white-space: pre-wrap;
     }
 
+    .profile-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .profile-header h2 {
+      margin: 0 0 6px 0;
+    }
+
+    .profile-subtitle {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .profile-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 16px;
+      min-height: 92px;
+    }
+
+    .profile-card.large {
+      grid-column: span 2;
+      grid-row: span 2;
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .profile-card.wide {
+      grid-column: span 2;
+    }
+
+    .profile-card h3 {
+      margin: 0 0 10px 0;
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .profile-card .primary-value {
+      font-size: 28px;
+      line-height: 1.15;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .profile-card .metric-value {
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .detail-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .detail-label {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .detail-value {
+      text-align: right;
+      font-weight: 700;
+    }
+
     .required {
       color: #b91c1c;
     }
@@ -241,6 +364,8 @@
     @media (max-width: 900px) {
       .app-shell { grid-template-columns: 1fr; }
       .grid, .grid-3 { grid-template-columns: 1fr; }
+      .profile-grid { grid-template-columns: 1fr; }
+      .profile-card.large, .profile-card.wide { grid-column: span 1; }
     }
   </style>
 </head>
@@ -264,8 +389,8 @@
       <section id="overview" class="tab-content active">
         <div class="header-card">
           <h2>Overview</h2>
-          <p>Centralize client data from JotForm, HMIS, HTH, and eCW into a SQL-backed client master system.</p>
-          <div class="banner"><strong>Current status:</strong> Upload/import prototype with placeholder tabs for future Tableau dashboards, AI insights, client search, and admin workflows.</div>
+          <p>Centralize client data and program metrics from JotForm, HMIS, HTH, eCW, and planning sheets into one analytics-ready system.</p>
+          <div class="banner"><strong>Current status:</strong> Upload/import prototype with client matching, metrics sheet storage, and placeholder tabs for future Tableau dashboards, AI insights, client search, and admin workflows.</div>
         </div>
 
         <div class="grid-3">
@@ -273,6 +398,7 @@
           <div class="stat"><strong id="statPrograms">—</strong>Programs</div>
           <div class="stat"><strong id="statImports">—</strong>Imports</div>
           <div class="stat"><strong id="statReviews">—</strong>Needs Review</div>
+          <div class="stat"><strong id="statMetrics">—</strong>Metrics</div>
         </div>
 
         <div class="panel">
@@ -284,6 +410,15 @@
             <li>Create client master table</li>
             <li>Prepare database for Tableau reporting</li>
           </ul>
+        </div>
+
+        <div class="panel">
+          <h3>Program Metrics / Planning Sheets</h3>
+          <p>Store non-client metrics sheets such as H&W/FY planning files for overview reporting without adding them to client master records.</p>
+          <input id="metricsFileInput" type="file" accept=".csv,.xlsx,.xls" />
+          <button class="primary" onclick="document.getElementById('metricsFileInput').click()">Upload Metrics Sheet</button>
+          <div id="metricsMessage" class="message" style="display:none;"></div>
+          <div id="metricsSummary"></div>
         </div>
       </section>
 
@@ -381,12 +516,23 @@
           <div class="grid">
             <div>
               <label for="clientSearch">Search clients</label>
-              <input id="clientSearch" placeholder="Search by name, DOB, or NSV ID" />
+              <input id="clientSearch" placeholder="Search by name, DOB, HMIS ID, eCW ID, or NSV ID" />
             </div>
             <div>
-              <label>&nbsp;</label>
-              <button class="primary" onclick="loadClients()">Refresh Clients</button>
+              <label for="clientPageSize">Rows per page</label>
+              <select id="clientPageSize" onchange="changeClientPageSize()">
+                <option value="25">25</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+              </select>
             </div>
+          </div>
+          <div class="pager">
+            <button class="primary" onclick="searchClients()">Search</button>
+            <button class="secondary" onclick="loadClients(1)">Refresh</button>
+            <button class="secondary" id="prevClientsButton" onclick="previousClientPage()">Previous</button>
+            <span id="clientPageStatus">Page 0 of 0</span>
+            <button class="secondary" id="nextClientsButton" onclick="nextClientPage()">Next</button>
           </div>
           <div id="clientsTable"></div>
           <div id="clientProfile" class="section" style="display:none;"></div>
@@ -503,6 +649,11 @@
     });
 
     loadStats();
+    loadMetricsSummary();
+    document.getElementById("metricsFileInput").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (file) uploadMetricsFile(file);
+    });
   });
 
   document.querySelectorAll(".tab-button").forEach(button => {
@@ -512,7 +663,10 @@
       button.classList.add("active");
       document.getElementById(button.dataset.tab).classList.add("active");
 
-      if (button.dataset.tab === "overview") loadStats();
+      if (button.dataset.tab === "overview") {
+        loadStats();
+        loadMetricsSummary();
+      }
       if (button.dataset.tab === "clients") loadClients();
       if (button.dataset.tab === "reviews") loadReviews();
     });
@@ -526,38 +680,160 @@
       document.getElementById("statPrograms").textContent = stats.programs ?? "0";
       document.getElementById("statImports").textContent = stats.imports ?? "0";
       document.getElementById("statReviews").textContent = stats.reviews ?? "0";
+      document.getElementById("statMetrics").textContent = stats.metrics ?? "0";
     } catch {
       document.getElementById("statClients").textContent = "—";
       document.getElementById("statPrograms").textContent = "—";
       document.getElementById("statImports").textContent = "—";
       document.getElementById("statReviews").textContent = "—";
+      document.getElementById("statMetrics").textContent = "—";
     }
   }
 
-  async function loadClients() {
+  async function loadMetricsSummary() {
+    const summary = document.getElementById("metricsSummary");
+    summary.innerHTML = "<p>Loading metrics summary...</p>";
+
+    try {
+      const response = await fetch("/metrics/summary");
+      const payload = await response.json();
+
+      if (!payload.total_metrics) {
+        summary.innerHTML = "<p>No metrics sheets have been imported yet.</p>";
+        return;
+      }
+
+      let html = `
+        <p><strong>Latest file:</strong> ${escapeHtml(payload.latest_file ?? "")}</p>
+        <p><strong>Programs covered:</strong> ${escapeHtml(payload.program_count)} (${escapeHtml((payload.programs || []).join(", "))})</p>
+      `;
+
+      if ((payload.recent_metrics || []).length) {
+        html += "<table><thead><tr><th>Program</th><th>Metric</th><th>Target</th><th>Method</th></tr></thead><tbody>";
+        payload.recent_metrics.forEach(metric => {
+          html += `<tr><td>${escapeHtml(metric.program ?? "")}</td><td>${escapeHtml(metric.metric ?? "")}</td><td>${escapeHtml(metric.target ?? "")}</td><td>${escapeHtml(metric.method ?? "")}</td></tr>`;
+        });
+        html += "</tbody></table>";
+      }
+
+      summary.innerHTML = html;
+    } catch {
+      summary.innerHTML = "<p>Unable to load metrics summary. Make sure the backend and database are running.</p>";
+    }
+  }
+
+  async function uploadMetricsFile(file) {
+    const metricsMessage = document.getElementById("metricsMessage");
+    metricsMessage.style.display = "block";
+    metricsMessage.textContent = "Uploading metrics sheet...";
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const previewResponse = await fetch("/upload/preview", {
+      method: "POST",
+      body: formData
+    });
+
+    if (!previewResponse.ok) {
+      metricsMessage.textContent = "Metrics upload failed. Make sure the backend is running.";
+      return;
+    }
+
+    const preview = await previewResponse.json();
+    if (preview.file_type !== "metrics") {
+      metricsMessage.textContent = "This does not look like a metrics/planning sheet. Use Upload Data for client files.";
+      return;
+    }
+
+    const importResponse = await fetch("/metrics/import", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        upload_id: preview.upload_id
+      })
+    });
+
+    const result = await importResponse.json();
+    if (!importResponse.ok) {
+      metricsMessage.textContent = "Metrics import failed: " + JSON.stringify(result, null, 2);
+      return;
+    }
+
+    metricsMessage.textContent =
+      `Metrics import complete.\n\nRows processed: ${result.rows_processed}\nRows imported: ${result.rows_imported}`;
+    loadStats();
+    loadMetricsSummary();
+  }
+
+  let clientPage = 1;
+  let clientTotalPages = 0;
+
+  function getClientPageSize() {
+    return Number(document.getElementById("clientPageSize").value || 50);
+  }
+
+  function searchClients() {
+    loadClients(1);
+  }
+
+  function changeClientPageSize() {
+    loadClients(1);
+  }
+
+  function previousClientPage() {
+    if (clientPage > 1) {
+      loadClients(clientPage - 1);
+    }
+  }
+
+  function nextClientPage() {
+    if (clientPage < clientTotalPages) {
+      loadClients(clientPage + 1);
+    }
+  }
+
+  function updateClientPager(payload) {
+    clientPage = payload.page || 1;
+    clientTotalPages = payload.total_pages || 0;
+
+    const total = payload.total || 0;
+    const pageSize = payload.page_size || getClientPageSize();
+    const start = total ? ((clientPage - 1) * pageSize) + 1 : 0;
+    const end = Math.min(clientPage * pageSize, total);
+
+    document.getElementById("clientPageStatus").textContent =
+      total ? `Showing ${start}-${end} of ${total} clients (page ${clientPage} of ${clientTotalPages})` : "No clients found";
+    document.getElementById("prevClientsButton").disabled = clientPage <= 1;
+    document.getElementById("nextClientsButton").disabled = clientPage >= clientTotalPages;
+  }
+
+  async function loadClients(page = clientPage) {
     const table = document.getElementById("clientsTable");
     const profile = document.getElementById("clientProfile");
     table.innerHTML = "<p>Loading clients...</p>";
     profile.style.display = "none";
 
     try {
-      const response = await fetch("/clients");
-      let clients = await response.json();
-      const search = document.getElementById("clientSearch").value.trim().toLowerCase();
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(getClientPageSize())
+      });
+      const search = document.getElementById("clientSearch").value.trim();
+      if (search) params.set("search", search);
 
-      if (search) {
-        clients = clients.filter(c => {
-          const haystack = [
-            c.nsv_client_id,
-            c.first_name,
-            c.last_name,
-            c.date_of_birth,
-            c.hmis_id,
-            c.ecw_id
-          ].filter(Boolean).join(" ").toLowerCase();
-          return haystack.includes(search);
-        });
-      }
+      const response = await fetch(`/clients?${params.toString()}`);
+      const payload = await response.json();
+      const clients = Array.isArray(payload) ? payload : (payload.items || []);
+      updateClientPager(Array.isArray(payload) ? {
+        items: payload,
+        total: payload.length,
+        page: 1,
+        page_size: payload.length,
+        total_pages: 1
+      } : payload);
 
       if (!clients.length) {
         table.innerHTML = "<p>No matching clients found.</p>";
@@ -573,6 +849,58 @@
     } catch {
       table.innerHTML = "<p>Unable to load clients. Make sure the FastAPI backend and database are running.</p>";
     }
+  }
+
+  document.getElementById("clientSearch").addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      searchClients();
+    }
+  });
+
+  function countBy(items, keyFn) {
+    const counts = new Map();
+    items.forEach(item => {
+      const key = keyFn(item);
+      if (!key) return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }
+
+  function uniqueValues(items, keyFn, limit = 6) {
+    const values = [];
+    const seen = new Set();
+    items.forEach(item => {
+      const value = keyFn(item);
+      if (!value || seen.has(value)) return;
+      seen.add(value);
+      values.push(value);
+    });
+    return values.slice(0, limit);
+  }
+
+  function getDetailValues(details, fieldName) {
+    return uniqueValues(
+      details.filter(detail => detail.field_name === fieldName),
+      detail => detail.field_value
+    );
+  }
+
+  function renderChips(values) {
+    if (!values.length) return `<span class="chip">None recorded</span>`;
+    return values.map(value => `<span class="chip">${escapeHtml(value)}</span>`).join("");
+  }
+
+  function renderDetailRows(rows) {
+    return rows
+      .filter(row => row.value)
+      .map(row => `
+        <div class="detail-row">
+          <span class="detail-label">${escapeHtml(row.label)}</span>
+          <span class="detail-value">${escapeHtml(row.value)}</span>
+        </div>
+      `)
+      .join("") || `<p class="profile-subtitle">No details recorded yet.</p>`;
   }
 
   async function viewClientProfile(nsvClientId) {
@@ -592,46 +920,87 @@
       const detailPayload = await detailsResponse.json();
       const sources = detailPayload.sources || [];
       const details = detailPayload.details || [];
+      const programCounts = countBy(programs, program => program.program_name);
+      const sourceCounts = countBy(sources, source => source.source_system);
+      const serviceCounts = countBy(
+        details.filter(detail => detail.field_name === "services_requested"),
+        detail => detail.field_value
+      );
+      const sourceFiles = uniqueValues(sources, source => source.original_file, 4);
+      const nsvPrograms = getDetailValues(details, "nsv_program");
+      const primaryProgram = nsvPrograms[0] || (programCounts[0] ? programCounts[0][0] : "No program recorded");
+      const primaryProgramContext = nsvPrograms.length
+        ? "NSV program from source details"
+        : "Imported program record";
 
-      let html = `
-        <h2>Client Profile</h2>
-        <p><strong>${escapeHtml(client.nsv_client_id)}</strong> ${escapeHtml(client.first_name)} ${escapeHtml(client.last_name)} ${client.date_of_birth ? `DOB: ${escapeHtml(client.date_of_birth)}` : ""}</p>
-        <h3>Programs</h3>
+      const identityRows = [
+        { label: "DOB", value: client.date_of_birth },
+        { label: "NSV ID", value: client.nsv_client_id },
+        { label: "HMIS ID", value: client.hmis_id },
+        { label: "eCW ID", value: client.ecw_id },
+      ];
+      const personalRows = [
+        { label: "Language", value: getDetailValues(details, "primary_language")[0] },
+        { label: "Housing", value: getDetailValues(details, "current_housing")[0] },
+        { label: "DC Resident", value: getDetailValues(details, "dc_resident")[0] },
+        { label: "NSV Resident", value: getDetailValues(details, "nsv_resident")[0] },
+      ];
+      const sourceRows = [
+        { label: "Connected sources", value: sourceCounts.map(([source, count]) => `${source} (${count})`).join(", ") },
+        { label: "Match methods", value: uniqueValues(sources, source => source.match_method, 4).join(", ") },
+        { label: "Recent files", value: sourceFiles.join(", ") },
+      ];
+
+      profile.innerHTML = `
+        <div class="profile-header">
+          <div>
+            <h2>${escapeHtml(client.first_name)} ${escapeHtml(client.last_name)}</h2>
+            <p class="profile-subtitle">${escapeHtml(client.nsv_client_id)}${client.date_of_birth ? ` · DOB ${escapeHtml(client.date_of_birth)}` : ""}</p>
+          </div>
+          <button class="secondary" onclick="document.getElementById('clientProfile').style.display='none'">Close</button>
+        </div>
+
+        <div class="profile-grid">
+          <div class="profile-card large">
+            <h3>NSV Program</h3>
+            <div class="primary-value">${escapeHtml(primaryProgram)}</div>
+            <p class="profile-subtitle">${escapeHtml(primaryProgramContext)}</p>
+            <div class="chip-list">${renderChips(programCounts.map(([programName, count]) => `${programName}${count > 1 ? ` · ${count} records` : ""}`))}</div>
+          </div>
+
+          <div class="profile-card">
+            <h3>Interactions</h3>
+            <div class="metric-value">${escapeHtml(programs.length || sources.length || 0)}</div>
+            <p class="profile-subtitle">Imported activity records</p>
+          </div>
+
+          <div class="profile-card">
+            <h3>Sources</h3>
+            <div class="metric-value">${escapeHtml(sourceCounts.length)}</div>
+            <div class="chip-list">${renderChips(sourceCounts.map(([source]) => source))}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Identity</h3>
+            <div class="detail-list">${renderDetailRows(identityRows)}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Services Requested</h3>
+            <div class="chip-list">${renderChips(serviceCounts.map(([service, count]) => `${service}${count > 1 ? ` · ${count}` : ""}`))}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Client Details</h3>
+            <div class="detail-list">${renderDetailRows(personalRows)}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Source Summary</h3>
+            <div class="detail-list">${renderDetailRows(sourceRows)}</div>
+          </div>
+        </div>
       `;
-
-      if (programs.length) {
-        html += "<table><thead><tr><th>Program</th><th>Source</th><th>Entry Date</th><th>Exit Date</th><th>Status</th></tr></thead><tbody>";
-        programs.forEach(program => {
-          html += `<tr><td>${escapeHtml(program.program_name)}</td><td>${escapeHtml(program.source_system)}</td><td>${escapeHtml(program.entry_date ?? "")}</td><td>${escapeHtml(program.exit_date ?? "")}</td><td>${escapeHtml(program.status ?? "")}</td></tr>`;
-        });
-        html += "</tbody></table>";
-      } else {
-        html += "<p>No program records found.</p>";
-      }
-
-      html += "<h3>Connected Sources</h3>";
-      if (sources.length) {
-        html += "<table><thead><tr><th>Source</th><th>Source Client ID</th><th>Match Method</th><th>Confidence</th><th>File</th></tr></thead><tbody>";
-        sources.forEach(source => {
-          html += `<tr><td>${escapeHtml(source.source_system)}</td><td>${escapeHtml(source.source_client_id ?? "")}</td><td>${escapeHtml(source.match_method ?? "")}</td><td>${escapeHtml(source.confidence_score ?? "")}</td><td>${escapeHtml(source.original_file ?? "")}</td></tr>`;
-        });
-        html += "</tbody></table>";
-      } else {
-        html += "<p>No source records found.</p>";
-      }
-
-      html += "<h3>Source Details</h3>";
-      if (details.length) {
-        html += "<table><thead><tr><th>Source</th><th>Program</th><th>Field</th><th>Value</th></tr></thead><tbody>";
-        details.slice(0, 50).forEach(detail => {
-          html += `<tr><td>${escapeHtml(detail.source_system)}</td><td>${escapeHtml(detail.program_name ?? "")}</td><td>${escapeHtml(detail.field_name)}</td><td>${escapeHtml(detail.field_value ?? "")}</td></tr>`;
-        });
-        html += "</tbody></table>";
-      } else {
-        html += "<p>No source details found.</p>";
-      }
-
-      profile.innerHTML = html;
     } catch {
       profile.innerHTML = "<p>Unable to load client profile. Make sure the backend and database are running.</p>";
     }

@@ -3,15 +3,18 @@ import uuid
 from pathlib import Path
 from typing import Dict, Optional
 
-from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from .database import SessionLocal
-from .models import Client, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch
+from .models import Client, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch, ProgramMetric
 from .schemas import ClientOut
 from .importer import preview_file, import_file
+from .metrics import get_metrics_summary, import_metrics_file
+from .utils import parse_date_candidates
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -21,8 +24,8 @@ app = FastAPI(title="NSV Client Data Platform")
 
 class ImportRequest(BaseModel):
     upload_id: str
-    source_system: str
-    program_name: str
+    source_system: str = ""
+    program_name: str = ""
     column_mapping: Dict[str, str] = {}
 
 
@@ -44,9 +47,63 @@ def upload_page():
     return FileResponse(project_root / "frontend" / "upload.html")
 
 
-@app.get("/clients", response_model=list[ClientOut])
-def get_clients(db: Session = Depends(get_db)):
-    return db.query(Client).limit(100).all()
+@app.get("/clients")
+def get_clients(
+    search: Optional[str] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=10, le=100),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Client)
+
+    if search:
+        search_text = search.strip()
+        search_like = f"%{search_text}%"
+        filters = [
+            Client.nsv_client_id.ilike(search_like),
+            Client.first_name.ilike(search_like),
+            Client.last_name.ilike(search_like),
+            Client.hmis_id.ilike(search_like),
+            Client.ecw_id.ilike(search_like),
+        ]
+
+        for parsed_date in parse_date_candidates(search_text):
+            filters.append(Client.date_of_birth == parsed_date)
+
+        detail_matches = (
+            select(SourceDetail.nsv_client_id)
+            .filter(SourceDetail.field_value.ilike(search_like))
+        )
+        filters.append(Client.nsv_client_id.in_(detail_matches))
+
+        name_parts = [part for part in search_text.split() if part]
+        if len(name_parts) >= 2:
+            first_part = name_parts[0]
+            last_part = " ".join(name_parts[1:])
+            filters.append(
+                (Client.first_name.ilike(f"%{first_part}%"))
+                & (Client.last_name.ilike(f"%{last_part}%"))
+            )
+
+        query = query.filter(or_(*filters))
+
+    total = query.count()
+    offset = (page - 1) * page_size
+    clients = (
+        query
+        .order_by(Client.created_at.desc(), Client.nsv_client_id.asc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    return {
+        "items": [ClientOut.model_validate(client) for client in clients],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size if total else 0,
+    }
 
 
 @app.get("/clients/{nsv_client_id}", response_model=ClientOut)
@@ -150,6 +207,7 @@ def get_stats(db: Session = Depends(get_db)):
         "programs": db.query(Program).count(),
         "imports": db.query(ImportLog).count(),
         "reviews": db.query(PotentialMatch).filter(PotentialMatch.status == "Needs Review").count(),
+        "metrics": db.query(ProgramMetric).count(),
     }
 
 
@@ -188,6 +246,24 @@ def upload_import(request: ImportRequest, db: Session = Depends(get_db)):
     )
 
     return result
+
+
+@app.post("/metrics/import")
+def metrics_import(request: ImportRequest, db: Session = Depends(get_db)):
+    matching_files = list(UPLOAD_DIR.glob(f"{request.upload_id}.*"))
+
+    if not matching_files:
+        raise HTTPException(status_code=404, detail="Uploaded file not found.")
+
+    try:
+        return import_metrics_file(db=db, file_path=str(matching_files[0]))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.get("/metrics/summary")
+def metrics_summary(db: Session = Depends(get_db)):
+    return get_metrics_summary(db)
 
 
 @app.get("/reviews")

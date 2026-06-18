@@ -61,6 +61,22 @@ DEFAULT_COLUMN_ALIASES = {
 
 
 SOURCE_DETAIL_FIELDS = {
+    "full_name": "source_full_name",
+    "first_name": "source_first_name",
+    "last_name": "source_last_name",
+    "date_of_birth": "source_date_of_birth",
+    "Full Name": "source_full_name",
+    "First Name": "source_first_name",
+    "First Name ": "source_first_name",
+    "Last Name": "source_last_name",
+    "Client Name": "source_client_name",
+    "Patient Name": "source_patient_name",
+    "Preferred Name": "source_preferred_name",
+    "Name": "source_name",
+    "Date of Birth": "source_date_of_birth",
+    "Date of Birth.1": "source_date_of_birth_alternate",
+    "DOB": "source_date_of_birth",
+    "Patient DOB": "source_patient_dob",
     "Program": "program",
     "Provider Name": "provider_name",
     "Full Provider Name": "full_provider_name",
@@ -133,28 +149,33 @@ def safe_str(value):
     return text
 
 
-def load_file(path: Path) -> pd.DataFrame:
+def is_metrics_layout(df: pd.DataFrame) -> bool:
+    normalized_columns = {str(c).strip().lower() for c in df.columns}
+    return {"program", "target", "metric", "method"}.issubset(normalized_columns)
+
+
+def load_file(path: Path, allow_metrics: bool = False) -> pd.DataFrame:
     if path.suffix.lower() == ".csv":
         for encoding in ["utf-8-sig", "utf-16", "latin1"]:
             try:
                 df = pd.read_csv(path, encoding=encoding, sep=None, engine="python")
-                return normalize_csv_layout(df)
+                return normalize_csv_layout(df, allow_metrics=allow_metrics)
             except UnsupportedClientImportError:
                 raise
             except Exception:
                 continue
-        return normalize_csv_layout(pd.read_csv(path, sep=None, engine="python"))
+        return normalize_csv_layout(pd.read_csv(path, sep=None, engine="python"), allow_metrics=allow_metrics)
 
     if path.suffix.lower() in [".xlsx", ".xls"]:
-        return read_best_excel_sheet(path)
+        return read_best_excel_sheet(path, allow_metrics=allow_metrics)
 
     raise ValueError("Only CSV and Excel files are currently supported.")
 
 
-def normalize_csv_layout(df: pd.DataFrame) -> pd.DataFrame:
-    normalized_columns = {str(c).strip().lower() for c in df.columns}
-
-    if {"program", "target", "metric", "method"}.issubset(normalized_columns):
+def normalize_csv_layout(df: pd.DataFrame, allow_metrics: bool = False) -> pd.DataFrame:
+    if is_metrics_layout(df):
+        if allow_metrics:
+            return df
         raise UnsupportedClientImportError(
             "This looks like a program metrics/planning file, not a client import file."
         )
@@ -193,12 +214,19 @@ def score_identity_columns(columns) -> int:
     return score
 
 
-def read_best_excel_sheet(path: Path) -> pd.DataFrame:
+def read_best_excel_sheet(path: Path, allow_metrics: bool = False) -> pd.DataFrame:
     sheets = pd.read_excel(path, sheet_name=None)
     best_sheet = None
     best_score = -1
 
     for sheet in sheets.values():
+        if is_metrics_layout(sheet):
+            if allow_metrics:
+                return sheet
+            raise UnsupportedClientImportError(
+                "This looks like a program metrics/planning file, not a client import file."
+            )
+
         score = score_identity_columns(sheet.columns)
         if score > best_score:
             best_sheet = sheet
@@ -260,9 +288,10 @@ def get_or_create_program(db: Session, program_name: str, source_system: str) ->
 
 def preview_file(file_path: str, max_rows: int = 10):
     path = Path(file_path)
-    df = load_file(path)
+    df = load_file(path, allow_metrics=True)
     return {
         "file_name": path.name,
+        "file_type": "metrics" if is_metrics_layout(df) else "client",
         "columns": [str(c) for c in df.columns],
         "rows": df.head(max_rows).fillna("").to_dict(orient="records"),
         "row_count": len(df),
@@ -346,9 +375,17 @@ def find_by_partial_identity(db: Session, first_name: str, last_name: str, dob):
 
 
 def extract_identity(row):
-    full_name = (
-        safe_str(row.get("full_name")) if "full_name" in row else None
-    ) or get_first_present_value(row, ["Client Name", "Patient Name", "Preferred Name", "Name"])
+    full_name = safe_str(row.get("full_name")) if "full_name" in row else None
+    backup_name = get_first_present_value(row, ["Client Name", "Patient Name", "Preferred Name", "Name"])
+
+    if full_name:
+        normalized_full_name = full_name.strip().lower()
+        if normalized_full_name in ["new client", "returning", "returning client"]:
+            full_name = backup_name
+        elif normalized_full_name.startswith("returning (") and full_name.endswith(")"):
+            full_name = full_name[len("returning ("):-1].strip()
+
+    full_name = full_name or backup_name
 
     if full_name:
         first_name, last_name = split_full_name(full_name)
@@ -489,11 +526,13 @@ def create_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id, row)
     return client
 
 
-def update_client_from_row(client, hmis_id, ecw_id, row):
+def update_client_from_row(client, hmis_id, ecw_id, dob, row):
     if hmis_id and not client.hmis_id:
         client.hmis_id = hmis_id
     if ecw_id and not client.ecw_id:
         client.ecw_id = ecw_id
+    if dob and not client.date_of_birth:
+        client.date_of_birth = dob
 
     for field in ["gender", "race", "ethnicity", "veteran_status"]:
         value = safe_str(row.get(field)) if field in row else None
@@ -573,7 +612,7 @@ def import_file(
                 rows_created += 1
             else:
                 rows_matched += 1
-                update_client_from_row(client, hmis_id, ecw_id, row)
+                update_client_from_row(client, hmis_id, ecw_id, dob, row)
                 db.commit()
 
             source_client_id = hmis_id or ecw_id

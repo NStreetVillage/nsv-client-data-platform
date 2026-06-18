@@ -121,3 +121,18 @@ class ImportLog(Base):
     rows_review = Column(Integer, default=0)
     rows_failed = Column(Integer, default=0)
     imported_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ProgramMetric(Base):
+    __tablename__ = "program_metrics"
+
+    metric_id = Column(Integer, primary_key=True, autoincrement=True)
+    program = Column(String(255), nullable=True)
+    target = Column(Text, nullable=True)
+    metric = Column(Text, nullable=True)
+    method = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    sort_order = Column(String(50), nullable=True)
+    month_values_json = Column(Text, nullable=True)
+    original_file = Column(String(255), nullable=True)
+    imported_at = Column(DateTime(timezone=True), server_default=func.now())

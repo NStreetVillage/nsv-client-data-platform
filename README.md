@@ -1,8 +1,8 @@
 # NSV Client Data Platform
 
-Internal Phase 1 prototype for consolidating N Street Village client reporting data across HMIS, HTH, eCW, JotForm, and future data sources.
+Internal Phase 1 prototype for consolidating N Street Village client reporting data and program metrics across HMIS, HTH, eCW, JotForm, planning sheets, and future data sources.
 
-The platform is not intended to replace those systems. HMIS, HTH, eCW, and JotForm remain systems of record. This app acts as a reporting and analytics layer that imports exported files, matches clients across systems, assigns an internal NSV Client ID, and shows cross-program participation.
+The platform is not intended to replace those systems. HMIS, HTH, eCW, JotForm, and planning workbooks remain systems of record. This app acts as a reporting and analytics layer that imports exported files, matches clients across systems, assigns an internal NSV Client ID, stores program metrics, and supports analysis across both person-level activity and overall program performance.
 
 ## Current Phase
 
@@ -21,6 +21,18 @@ The core business value is:
 One client
 Many programs
 Many source systems
+Program metrics
+Cross-layer analytics
+```
+
+The broader product direction is an all-in-one client processing and analytics application:
+
+```text
+Client records + program participation + source details + program metrics
+        |
+Clean SQL reporting layer
+        |
+Tableau dashboards, data quality review, and future AI insights
 ```
 
 ## Current Local Setup
@@ -101,9 +113,11 @@ User uploads CSV/XLSX
         |
 Backend previews file
         |
-User maps columns
+App identifies client files vs metrics/planning files
         |
-Backend imports rows
+Client file: user maps columns
+        |
+Backend imports client rows
         |
 App creates or matches clients
         |
@@ -112,6 +126,12 @@ App creates program enrollment records
 App stores source-specific details
         |
 User searches clients and views profile details
+
+Metrics/planning file:
+        |
+Backend stores program metrics
+        |
+Overview shows metric counts, programs covered, and recent metrics
 ```
 
 ## Backend
@@ -165,12 +185,13 @@ POST /upload/import
 ```text
 upload_id
 file_name
+file_type
 columns
 first preview rows
 row_count
 ```
 
-The frontend uses this response to render the preview table and column mapping controls.
+The frontend uses this response to render the preview table and column mapping controls. `file_type` is currently either `client` or `metrics`.
 
 ### Import
 
@@ -195,6 +216,38 @@ The backend then:
 8. Stores source details.
 9. Writes an import summary.
 
+### Metrics Import
+
+Metrics/planning files such as `H&W Data_FY27(Sheet1).csv` are not client files. They do not create clients, enrollments, or review queue records.
+
+These files are handled separately:
+
+```text
+POST /metrics/import
+GET  /metrics/summary
+```
+
+The app recognizes metrics files by columns such as:
+
+```text
+Program
+Target
+Metric
+Method
+Jul-27
+Aug-27
+...
+```
+
+The Overview page stores and displays these metrics so leadership can eventually compare:
+
+```text
+How many clients were served?
+Which programs did they touch?
+What targets or metrics were attached to those programs?
+How do person-level records compare with overall program goals?
+```
+
 ## Database Model
 
 The current core tables are:
@@ -207,6 +260,7 @@ client_sources
 source_details
 potential_matches
 imports
+program_metrics
 ```
 
 ### clients
@@ -308,6 +362,24 @@ rows_matched
 rows_review
 rows_failed
 ```
+
+### program_metrics
+
+Stores non-client program planning and performance metrics:
+
+```text
+program
+target
+metric
+method
+notes
+sort_order
+month_values_json
+original_file
+imported_at
+```
+
+This table is intentionally separate from `clients`. A metrics sheet can support dashboards and leadership reporting without creating fake client records.
 
 ## Matching Logic
 
@@ -477,21 +549,21 @@ No duplicate merge UI yet
 No manual match approval workflow yet
 No Tableau connection yet
 No AI functionality yet
+Metrics storage is basic and does not yet reconcile program labels to the canonical programs table
 ```
 
 SQLite is fine for local demo testing. PostgreSQL should be used for production or shared reporting work.
 
 ## Recommended Next Steps
 
-1. Add a stronger server-side client search endpoint, such as `GET /clients?search=...`.
-2. Build a clearer client profile page for demo use.
-3. Create a small redacted demo dataset showing one fake client across BWC, HTH, eCW, and HMIS.
-4. Add review/merge tools for duplicate or ambiguous clients.
+1. Build review/merge tools for duplicate or ambiguous clients.
+2. Create a small redacted demo dataset showing one fake client across BWC, HTH, eCW, and HMIS.
+3. Add canonical program mapping so client enrollments and metrics sheets use the same program names.
+4. Add reporting endpoints that combine client participation, source details, import summaries, data quality, and program metrics.
 5. Add Alembic migrations before the schema grows further.
 6. Move production/shared usage back to PostgreSQL.
-7. Add reporting endpoints for cross-program clients, import summaries, and data quality.
-8. Prepare Tableau views after PostgreSQL is stable.
-9. Add AI only after clean SQL reporting tables or views exist.
+7. Prepare Tableau views after PostgreSQL is stable.
+8. Add AI only after clean SQL reporting tables or views exist.
 
 ## Data Safety
 

@@ -28,16 +28,30 @@ def parse_date(value) -> Optional[date]:
     if raw == "" or raw.lower() in ["nan", "none", "null", "unknown"]:
         return None
 
-    # Let pandas-style timestamps pass through as strings.
-    raw = raw.split(" ")[0]
+    # Let pandas-style timestamps pass through as strings without breaking
+    # month-name dates such as "Feb 11, 1982".
+    if re.match(r"^\d{4}[-/]\d{1,2}[-/]\d{1,2}", raw):
+        raw = raw.split(" ")[0]
 
     for fmt in [
         "%Y-%m-%d",
+        "%Y-%d-%m",
         "%m/%d/%Y",
         "%m/%d/%y",
         "%m-%d-%Y",
         "%m-%d-%y",
         "%Y/%m/%d",
+        "%Y/%d/%m",
+        "%b %d, %Y",
+        "%B %d, %Y",
+        "%b %d %Y",
+        "%B %d %Y",
+        "%d %b %Y",
+        "%d %B %Y",
+        "%d-%b-%Y",
+        "%d-%b-%y",
+        "%d-%B-%Y",
+        "%d-%B-%y",
     ]:
         try:
             return datetime.strptime(raw, fmt).date()
@@ -45,6 +59,37 @@ def parse_date(value) -> Optional[date]:
             continue
 
     return None
+
+
+def parse_date_candidates(value) -> list[date]:
+    """
+    Return all plausible full dates for a search string.
+
+    This intentionally allows ambiguous searches like "1982-11-2" to match
+    either November 2 or February 11, because source systems mix US dates,
+    ISO dates, and human-entered month/day order.
+    """
+    parsed = parse_date(value)
+    candidates = []
+    if parsed:
+        candidates.append(parsed)
+
+    if value is None:
+        return candidates
+
+    raw = str(value).strip()
+    match = re.match(r"^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$", raw)
+    if match:
+        year, first, second = [int(part) for part in match.groups()]
+        for month, day in [(first, second), (second, first)]:
+            try:
+                candidate = date(year, month, day)
+            except ValueError:
+                continue
+            if candidate not in candidates:
+                candidates.append(candidate)
+
+    return candidates
 
 
 def generate_nsv_id(next_number: int) -> str:
