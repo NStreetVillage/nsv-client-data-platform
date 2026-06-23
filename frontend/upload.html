@@ -1,12 +1,3 @@
-
-<!--
-  NSV Client Data Platform frontend.
-
-  This file intentionally contains three parts in one place:
-  1. CSS in the <style> block: controls how the page looks.
-  2. HTML in the <body>: defines what appears on the page.
-  3. JavaScript in the <script> block: controls page behavior and API calls.
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -265,6 +256,73 @@
       white-space: pre-wrap;
     }
 
+    /* Client list plus side profile panel. */
+    .client-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 0;
+      gap: 0;
+      align-items: start;
+      margin-top: 18px;
+      overflow: hidden;
+      transition: grid-template-columns 220ms ease, gap 220ms ease;
+    }
+
+    .client-workspace.profile-open {
+      grid-template-columns: minmax(0, 1fr) 420px;
+      gap: 18px;
+    }
+
+    #clientsTable {
+      min-width: 0;
+      max-height: calc(100vh - 330px);
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: white;
+    }
+
+    #clientsTable table {
+      min-width: 820px;
+      margin-top: 0;
+    }
+
+    #clientsTable th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    #clientsTable p {
+      margin: 0;
+      padding: 16px;
+    }
+
+    .profile-side-panel {
+      position: sticky;
+      top: 24px;
+      box-sizing: border-box;
+      min-width: 0;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: white;
+      padding: 18px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.05);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(32px);
+      pointer-events: none;
+      transition: opacity 220ms ease, transform 220ms ease, visibility 220ms ease;
+    }
+
+    .client-workspace.profile-open .profile-side-panel {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
     /* Client profile layout and cards. */
     .profile-header {
       display: flex;
@@ -285,7 +343,7 @@
 
     .profile-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 14px;
       margin-top: 14px;
     }
@@ -299,14 +357,14 @@
     }
 
     .profile-card.large {
-      grid-column: span 2;
-      grid-row: span 2;
+      grid-column: span 1;
+      grid-row: span 1;
       background: #f8fafc;
       border-color: #cbd5e1;
     }
 
     .profile-card.wide {
-      grid-column: span 2;
+      grid-column: span 1;
     }
 
     .profile-card h3 {
@@ -393,6 +451,20 @@
     @media (max-width: 900px) {
       .app-shell { grid-template-columns: 1fr; }
       .grid, .grid-3 { grid-template-columns: 1fr; }
+      .client-workspace,
+      .client-workspace.profile-open {
+        grid-template-columns: 1fr;
+        gap: 18px;
+        overflow: visible;
+      }
+      #clientsTable {
+        max-height: 55vh;
+      }
+      .profile-side-panel {
+        position: static;
+        max-height: none;
+        transform: none;
+      }
       .profile-grid { grid-template-columns: 1fr; }
       .profile-card.large, .profile-card.wide { grid-column: span 1; }
     }
@@ -574,8 +646,10 @@
             <span id="clientPageStatus">Page 0 of 0</span>
             <button class="secondary" id="nextClientsButton" onclick="nextClientPage()">Next</button>
           </div>
-          <div id="clientsTable"></div>
-          <div id="clientProfile" class="section" style="display:none;"></div>
+          <div id="clientWorkspace" class="client-workspace">
+            <div id="clientsTable"></div>
+            <aside id="clientProfile" class="profile-side-panel" aria-hidden="true"></aside>
+          </div>
         </div>
       </section>
 
@@ -896,8 +970,10 @@
   async function loadClients(page = clientPage) {
     const table = document.getElementById("clientsTable");
     const profile = document.getElementById("clientProfile");
+    const workspace = document.getElementById("clientWorkspace");
     table.innerHTML = "<p>Loading clients...</p>";
-    profile.style.display = "none";
+    workspace.classList.remove("profile-open");
+    profile.setAttribute("aria-hidden", "true");
 
     try {
       const params = new URLSearchParams({
@@ -930,7 +1006,7 @@
       // Build one table row per client. The View button opens the profile panel.
       let html = "<table><thead><tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th><th>Profile</th></tr></thead><tbody>";
       clients.forEach(c => {
-        html += `<tr><td>${escapeHtml(c.nsv_client_id)}</td><td>${escapeHtml(c.first_name)}</td><td>${escapeHtml(c.last_name)}</td><td>${escapeHtml(c.date_of_birth ?? "N/A")}</td><td>${escapeHtml(c.hmis_id ?? "N/A")}</td><td>${escapeHtml(c.ecw_id ?? "N/A")}</td><td><button class="secondary" onclick="viewClientProfile('${escapeHtml(c.nsv_client_id)}')">View</button></td></tr>`;
+        html += `<tr><td>${escapeHtml(c.nsv_client_id ?? "N/A")}</td><td>${escapeHtml(c.first_name ?? "N/A")}</td><td>${escapeHtml(c.last_name ?? "N/A")}</td><td>${escapeHtml(c.date_of_birth ?? "N/A")}</td><td>${escapeHtml(c.hmis_id ?? "N/A")}</td><td>${escapeHtml(c.ecw_id ?? "N/A")}</td><td><button class="secondary" onclick="viewClientProfile('${escapeHtml(c.nsv_client_id)}')">View</button></td></tr>`;
       });
       html += "</tbody></table>";
       table.innerHTML = html;
@@ -997,10 +1073,20 @@
       .join("") || `<p class="profile-subtitle">No details recorded yet.</p>`;
   }
 
+  // Closes the slide-in client profile and returns the table to full width.
+  function closeClientProfile() {
+    const workspace = document.getElementById("clientWorkspace");
+    const profile = document.getElementById("clientProfile");
+    workspace.classList.remove("profile-open");
+    profile.setAttribute("aria-hidden", "true");
+  }
+
   // Loads and displays the profile panel for one NSV client.
   async function viewClientProfile(nsvClientId) {
+    const workspace = document.getElementById("clientWorkspace");
     const profile = document.getElementById("clientProfile");
-    profile.style.display = "block";
+    workspace.classList.add("profile-open");
+    profile.setAttribute("aria-hidden", "false");
     profile.innerHTML = "<p>Loading client profile...</p>";
 
     try {
@@ -1033,30 +1119,31 @@
 
       // These arrays are rendered by renderDetailRows below.
       const identityRows = [
-{ label: "DOB", value: client.date_of_birth ?? "N/A" },
+        { label: "DOB", value: client.date_of_birth ?? "N/A" },
         { label: "NSV ID", value: client.nsv_client_id ?? "N/A" },
         { label: "HMIS ID", value: client.hmis_id ?? "N/A" },
         { label: "eCW ID", value: client.ecw_id ?? "N/A" },
       ];
       const personalRows = [
-        { label: "Language", value: getDetailValues(details, "primary_language")[0] },
-        { label: "Housing", value: getDetailValues(details, "current_housing")[0] },
-        { label: "DC Resident", value: getDetailValues(details, "dc_resident")[0] },
-        { label: "NSV Resident", value: getDetailValues(details, "nsv_resident")[0] },
+        { label: "Language", value: getDetailValues(details, "primary_language")[0] ?? "N/A" },
+        { label: "Housing", value: getDetailValues(details, "current_housing")[0] ?? "N/A" },
+        { label: "DC Resident", value: getDetailValues(details, "dc_resident")[0] ?? "N/A" },
+        { label: "NSV Resident", value: getDetailValues(details, "nsv_resident")[0] ?? "N/A" },
       ];
       const sourceRows = [
-        { label: "Connected sources", value: sourceCounts.map(([source, count]) => `${source} (${count})`).join(", ") },
-        { label: "Match methods", value: uniqueValues(sources, source => source.match_method, 4).join(", ") },
-        { label: "Recent files", value: sourceFiles.join(", ") },
+        { label: "Connected sources", value: sourceCounts.map(([source, count]) => `${source} (${count})`).join(", ") || "N/A" },
+        { label: "Match methods", value: uniqueValues(sources, source => source.match_method, 4).join(", ") || "N/A" },
+        { label: "Recent files", value: sourceFiles.join(", ") || "N/A" },
       ];
 
       // Replace the profile area with a full profile card layout.
       profile.innerHTML = `
         <div class="profile-header">
           <div>
-            <h2>${escapeHtml(client.first_name)} ${escapeHtml(client.last_name)}</h2>
-<p class="profile-subtitle">${escapeHtml(client.nsv_client_id ?? "N/A")} · DOB ${escapeHtml(client.date_of_birth ?? "N/A")}</p>          </div>
-          <button class="secondary" onclick="document.getElementById('clientProfile').style.display='none'">Close</button>
+            <h2>${escapeHtml(client.first_name ?? "N/A")} ${escapeHtml(client.last_name ?? "")}</h2>
+            <p class="profile-subtitle">${escapeHtml(client.nsv_client_id ?? "N/A")} - DOB ${escapeHtml(client.date_of_birth ?? "N/A")}</p>
+          </div>
+          <button class="secondary" onclick="closeClientProfile()">Close</button>
         </div>
 
         <div class="profile-grid">
@@ -1064,7 +1151,7 @@
             <h3>NSV Program</h3>
             <div class="primary-value">${escapeHtml(primaryProgram)}</div>
             <p class="profile-subtitle">${escapeHtml(primaryProgramContext)}</p>
-            <div class="chip-list">${renderChips(programCounts.map(([programName, count]) => `${programName}${count > 1 ? ` · ${count} records` : ""}`))}</div>
+            <div class="chip-list">${renderChips(programCounts.map(([programName, count]) => `${programName}${count > 1 ? ` - ${count} records` : ""}`))}</div>
           </div>
 
           <div class="profile-card">
@@ -1086,7 +1173,7 @@
 
           <div class="profile-card wide">
             <h3>Services Requested</h3>
-            <div class="chip-list">${renderChips(serviceCounts.map(([service, count]) => `${service}${count > 1 ? ` · ${count}` : ""}`))}</div>
+            <div class="chip-list">${renderChips(serviceCounts.map(([service, count]) => `${service}${count > 1 ? ` - ${count}` : ""}`))}</div>
           </div>
 
           <div class="profile-card wide">
