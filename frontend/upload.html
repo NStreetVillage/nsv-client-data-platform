@@ -1,10 +1,24 @@
 
+<!--
+  NSV Client Data Platform frontend.
+
+  This file intentionally contains three parts in one place:
+  1. CSS in the <style> block: controls how the page looks.
+  2. HTML in the <body>: defines what appears on the page.
+  3. JavaScript in the <script> block: controls page behavior and API calls.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>NSV Client Data Platform</title>
+
+  <!-- =========================
+       CSS SECTION
+       This section styles the page. It does not load data or talk to the backend.
+       ========================= -->
   <style>
+    /* Shared color variables used throughout the page. */
     :root {
       --bg: #f6f7f9;
       --panel: #ffffff;
@@ -17,6 +31,7 @@
       --warning-border: #fed7aa;
     }
 
+    /* Base page styling. */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -24,12 +39,14 @@
       color: var(--text);
     }
 
+    /* Main two-column layout: sidebar navigation + content area. */
     .app-shell {
       display: grid;
       grid-template-columns: 260px 1fr;
       min-height: 100vh;
     }
 
+    /* Left navigation panel. */
     .sidebar {
       background: #111827;
       color: white;
@@ -48,6 +65,7 @@
       font-size: 13px;
     }
 
+    /* Sidebar tab buttons. The active class marks the currently visible tab. */
     .tab-button {
       width: 100%;
       background: transparent;
@@ -74,6 +92,7 @@
       padding: 32px;
     }
 
+    /* Reusable white content containers. */
     .header-card, .panel {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -100,6 +119,7 @@
       display: block;
     }
 
+    /* Drag-and-drop upload box. */
     .drop-zone {
       border: 2px dashed #9ca3af;
       border-radius: 14px;
@@ -119,6 +139,7 @@
       display: none;
     }
 
+    /* Shared form field styling. */
     label {
       font-weight: bold;
       display: block;
@@ -135,6 +156,7 @@
       font-family: Arial, sans-serif;
     }
 
+    /* Responsive grid helpers used by multiple tabs. */
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -147,6 +169,7 @@
       gap: 18px;
     }
 
+    /* Overview dashboard stat cards. */
     .stat {
       background: var(--soft);
       padding: 18px;
@@ -168,6 +191,7 @@
       color: #374151;
     }
 
+    /* Primary and secondary button styles. */
     button.primary {
       padding: 12px 18px;
       border: none;
@@ -194,6 +218,7 @@
       font-weight: bold;
     }
 
+    /* Pagination controls for the client table. */
     .pager {
       display: flex;
       align-items: center;
@@ -207,6 +232,7 @@
       font-weight: bold;
     }
 
+    /* Table styling for previews, search results, reviews, and summaries. */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -239,6 +265,7 @@
       white-space: pre-wrap;
     }
 
+    /* Client profile layout and cards. */
     .profile-header {
       display: flex;
       justify-content: space-between;
@@ -349,6 +376,7 @@
       font-weight: 700;
     }
 
+    /* Required-field marker and informational banner styles. */
     .required {
       color: #b91c1c;
     }
@@ -361,6 +389,7 @@
       margin-top: 14px;
     }
 
+    /* Mobile layout: collapse side-by-side grids into a single column. */
     @media (max-width: 900px) {
       .app-shell { grid-template-columns: 1fr; }
       .grid, .grid-3 { grid-template-columns: 1fr; }
@@ -370,7 +399,13 @@
   </style>
 </head>
 <body>
+  <!-- =========================
+       HTML SECTION
+       This section defines the visible page structure.
+       JavaScript below will show/hide tabs and fill empty containers with data.
+       ========================= -->
   <div class="app-shell">
+    <!-- Sidebar navigation. Each button's data-tab value matches a section id below. -->
     <aside class="sidebar">
       <h1>NSV Client Data Platform</h1>
       <p>Phase 1 prototype</p>
@@ -386,6 +421,7 @@
     </aside>
 
     <main class="main">
+      <!-- Overview tab: high-level project status, dashboard counts, and metrics upload. -->
       <section id="overview" class="tab-content active">
         <div class="header-card">
           <h2>Overview</h2>
@@ -422,6 +458,7 @@
         </div>
       </section>
 
+      <!-- Upload tab: client CSV/Excel preview, column mapping, and import workflow. -->
       <section id="upload" class="tab-content">
         <div class="header-card">
           <h2>Upload Data</h2>
@@ -474,6 +511,7 @@
         </div>
       </section>
 
+      <!-- Placeholder for future Tableau embeds. -->
       <section id="visualizations" class="tab-content">
         <div class="header-card">
           <h2>Tableau Visualizations</h2>
@@ -492,6 +530,7 @@
         </div>
       </section>
 
+      <!-- Placeholder for future AI-assisted reporting features. -->
       <section id="ai" class="tab-content">
         <div class="header-card">
           <h2>AI Insights</h2>
@@ -506,6 +545,7 @@
         </div>
       </section>
 
+      <!-- Client tab: searchable master client table and profile detail panel. -->
       <section id="clients" class="tab-content">
         <div class="header-card">
           <h2>Client Master Records</h2>
@@ -540,6 +580,7 @@
       </section>
 
 
+      <!-- Review tab: records that need manual matching decisions. -->
       <section id="reviews" class="tab-content">
         <div class="header-card">
           <h2>Review Queue</h2>
@@ -552,6 +593,7 @@
         </div>
       </section>
 
+      <!-- Static reference list of expected source systems and program reports. -->
       <section id="sources" class="tab-content">
         <div class="header-card">
           <h2>Data Sources</h2>
@@ -584,6 +626,7 @@
         </div>
       </section>
 
+      <!-- Placeholder for future admin settings. -->
       <section id="settings" class="tab-content">
         <div class="header-card">
           <h2>Admin / Settings</h2>
@@ -604,7 +647,12 @@
     </main>
   </div>
 
+<!-- =========================
+     JAVASCRIPT SECTION
+     This section controls page behavior and communicates with FastAPI endpoints.
+     ========================= -->
 <script>
+  // Maps each source system to the programs that should appear in the Program dropdown.
   const programOptions = {
     "eCW": ["Behavioral Health Services"],
     "JotForm": ["Bethany Women's Center", "Wellness Center"],
@@ -622,15 +670,18 @@
     "HMIS/HTH": ["Erna's House"]
   };
 
+  // Rebuilds the Program dropdown whenever the user changes Source System.
   function populatePrograms(source) {
     const programSelect = document.getElementById("programName");
     programSelect.innerHTML = "";
 
+    // The first option is instructional text, not a real program value.
     const placeholder = document.createElement("option");
     placeholder.value = "";
     placeholder.textContent = source ? "Select program" : "Select a source first";
     programSelect.appendChild(placeholder);
 
+    // Add one option for each program connected to the selected source.
     const programs = programOptions[source] || [];
     programs.forEach(program => {
       const option = document.createElement("option");
@@ -640,29 +691,40 @@
     });
   }
 
+  // Runs once the browser has loaded the page and all HTML elements exist.
   document.addEventListener("DOMContentLoaded", () => {
+    // Start with an empty Program dropdown until a Source System is selected.
     populatePrograms("");
 
+    // Keep Program Name choices in sync with Source System.
     const sourceSelect = document.getElementById("sourceSystem");
     sourceSelect.addEventListener("change", function () {
       populatePrograms(this.value);
     });
 
+    // Load initial dashboard data for the Overview tab.
     loadStats();
     loadMetricsSummary();
+
+    // Watch the metrics file input and upload a selected metrics sheet.
     document.getElementById("metricsFileInput").addEventListener("change", (event) => {
       const file = event.target.files[0];
       if (file) uploadMetricsFile(file);
     });
   });
 
+  // Handles clicks on the sidebar tabs.
   document.querySelectorAll(".tab-button").forEach(button => {
     button.addEventListener("click", () => {
+      // Hide every tab and remove every active button state.
       document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
       document.querySelectorAll(".tab-content").forEach(section => section.classList.remove("active"));
+
+      // Show the tab whose id matches this button's data-tab value.
       button.classList.add("active");
       document.getElementById(button.dataset.tab).classList.add("active");
 
+      // Refresh backend-loaded tabs when the user opens them.
       if (button.dataset.tab === "overview") {
         loadStats();
         loadMetricsSummary();
@@ -672,6 +734,7 @@
     });
   });
 
+  // Loads the Overview stat cards from the backend /stats endpoint.
   async function loadStats() {
     try {
       const response = await fetch("/stats");
@@ -690,6 +753,7 @@
     }
   }
 
+  // Loads the metrics/planning sheet summary shown on the Overview tab.
   async function loadMetricsSummary() {
     const summary = document.getElementById("metricsSummary");
     summary.innerHTML = "<p>Loading metrics summary...</p>";
@@ -698,16 +762,19 @@
       const response = await fetch("/metrics/summary");
       const payload = await response.json();
 
+      // Empty state when no metrics sheets have been imported yet.
       if (!payload.total_metrics) {
         summary.innerHTML = "<p>No metrics sheets have been imported yet.</p>";
         return;
       }
 
+      // Start with high-level summary text.
       let html = `
         <p><strong>Latest file:</strong> ${escapeHtml(payload.latest_file ?? "")}</p>
         <p><strong>Programs covered:</strong> ${escapeHtml(payload.program_count)} (${escapeHtml((payload.programs || []).join(", "))})</p>
       `;
 
+      // Add a recent metrics table when the backend returns sample rows.
       if ((payload.recent_metrics || []).length) {
         html += "<table><thead><tr><th>Program</th><th>Metric</th><th>Target</th><th>Method</th></tr></thead><tbody>";
         payload.recent_metrics.forEach(metric => {
@@ -722,14 +789,17 @@
     }
   }
 
+  // Uploads and imports a program metrics/planning sheet from the Overview tab.
   async function uploadMetricsFile(file) {
     const metricsMessage = document.getElementById("metricsMessage");
     metricsMessage.style.display = "block";
     metricsMessage.textContent = "Uploading metrics sheet...";
 
+    // FormData is required because the request body contains an actual file.
     const formData = new FormData();
     formData.append("file", file);
 
+    // Reuse the preview endpoint to save the file and identify its layout.
     const previewResponse = await fetch("/upload/preview", {
       method: "POST",
       body: formData
@@ -741,11 +811,14 @@
     }
 
     const preview = await previewResponse.json();
+
+    // Metrics files must have Program, Target, Metric, and Method columns.
     if (preview.file_type !== "metrics") {
       metricsMessage.textContent = "This does not look like a metrics/planning sheet. Use Upload Data for client files.";
       return;
     }
 
+    // Import the already-saved file by upload_id.
     const importResponse = await fetch("/metrics/import", {
       method: "POST",
       headers: {
@@ -764,37 +837,46 @@
 
     metricsMessage.textContent =
       `Metrics import complete.\n\nRows processed: ${result.rows_processed}\nRows imported: ${result.rows_imported}`;
+
+    // Refresh overview data after a successful metrics import.
     loadStats();
     loadMetricsSummary();
   }
 
+  // Client search pagination state.
   let clientPage = 1;
   let clientTotalPages = 0;
 
+  // Reads the selected number of rows per page for client search.
   function getClientPageSize() {
     return Number(document.getElementById("clientPageSize").value || 50);
   }
 
+  // Starts a fresh client search from page 1.
   function searchClients() {
     loadClients(1);
   }
 
+  // Reloads from page 1 when the page size changes.
   function changeClientPageSize() {
     loadClients(1);
   }
 
+  // Moves to the previous client results page when possible.
   function previousClientPage() {
     if (clientPage > 1) {
       loadClients(clientPage - 1);
     }
   }
 
+  // Moves to the next client results page when possible.
   function nextClientPage() {
     if (clientPage < clientTotalPages) {
       loadClients(clientPage + 1);
     }
   }
 
+  // Updates the pager text and disables Previous/Next buttons at the ends.
   function updateClientPager(payload) {
     clientPage = payload.page || 1;
     clientTotalPages = payload.total_pages || 0;
@@ -810,6 +892,7 @@
     document.getElementById("nextClientsButton").disabled = clientPage >= clientTotalPages;
   }
 
+  // Fetches client search results from the backend and renders the table.
   async function loadClients(page = clientPage) {
     const table = document.getElementById("clientsTable");
     const profile = document.getElementById("clientProfile");
@@ -821,11 +904,15 @@
         page: String(page),
         page_size: String(getClientPageSize())
       });
+
+      // Include the search term only when the user typed one.
       const search = document.getElementById("clientSearch").value.trim();
       if (search) params.set("search", search);
 
       const response = await fetch(`/clients?${params.toString()}`);
       const payload = await response.json();
+
+      // Current API returns {items, total, page...}; this fallback also supports a plain array.
       const clients = Array.isArray(payload) ? payload : (payload.items || []);
       updateClientPager(Array.isArray(payload) ? {
         items: payload,
@@ -840,6 +927,7 @@
         return;
       }
 
+      // Build one table row per client. The View button opens the profile panel.
       let html = "<table><thead><tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th><th>Profile</th></tr></thead><tbody>";
       clients.forEach(c => {
         html += `<tr><td>${escapeHtml(c.nsv_client_id)}</td><td>${escapeHtml(c.first_name)}</td><td>${escapeHtml(c.last_name)}</td><td>${escapeHtml(c.date_of_birth ?? "")}</td><td>${escapeHtml(c.hmis_id ?? "")}</td><td>${escapeHtml(c.ecw_id ?? "")}</td><td><button class="secondary" onclick="viewClientProfile('${escapeHtml(c.nsv_client_id)}')">View</button></td></tr>`;
@@ -851,12 +939,14 @@
     }
   }
 
+  // Pressing Enter in the client search box runs the search.
   document.getElementById("clientSearch").addEventListener("keydown", event => {
     if (event.key === "Enter") {
       searchClients();
     }
   });
 
+  // Counts rows by a calculated key, such as program name or source system.
   function countBy(items, keyFn) {
     const counts = new Map();
     items.forEach(item => {
@@ -867,6 +957,7 @@
     return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   }
 
+  // Returns unique values from a list, preserving the first-seen order.
   function uniqueValues(items, keyFn, limit = 6) {
     const values = [];
     const seen = new Set();
@@ -879,6 +970,7 @@
     return values.slice(0, limit);
   }
 
+  // Pulls values for one named source-detail field from a client's detail rows.
   function getDetailValues(details, fieldName) {
     return uniqueValues(
       details.filter(detail => detail.field_name === fieldName),
@@ -886,11 +978,13 @@
     );
   }
 
+  // Renders small pill-shaped labels for profile summary values.
   function renderChips(values) {
     if (!values.length) return `<span class="chip">None recorded</span>`;
     return values.map(value => `<span class="chip">${escapeHtml(value)}</span>`).join("");
   }
 
+  // Renders label/value rows inside profile cards.
   function renderDetailRows(rows) {
     return rows
       .filter(row => row.value)
@@ -903,12 +997,14 @@
       .join("") || `<p class="profile-subtitle">No details recorded yet.</p>`;
   }
 
+  // Loads and displays the profile panel for one NSV client.
   async function viewClientProfile(nsvClientId) {
     const profile = document.getElementById("clientProfile");
     profile.style.display = "block";
     profile.innerHTML = "<p>Loading client profile...</p>";
 
     try {
+      // Load the master client, program records, and source details at the same time.
       const [clientResponse, programsResponse, detailsResponse] = await Promise.all([
         fetch(`/clients/${encodeURIComponent(nsvClientId)}`),
         fetch(`/clients/${encodeURIComponent(nsvClientId)}/programs`),
@@ -920,6 +1016,8 @@
       const detailPayload = await detailsResponse.json();
       const sources = detailPayload.sources || [];
       const details = detailPayload.details || [];
+
+      // Build summary counts used by the profile cards.
       const programCounts = countBy(programs, program => program.program_name);
       const sourceCounts = countBy(sources, source => source.source_system);
       const serviceCounts = countBy(
@@ -933,6 +1031,7 @@
         ? "NSV program from source details"
         : "Imported program record";
 
+      // These arrays are rendered by renderDetailRows below.
       const identityRows = [
         { label: "DOB", value: client.date_of_birth },
         { label: "NSV ID", value: client.nsv_client_id },
@@ -951,6 +1050,7 @@
         { label: "Recent files", value: sourceFiles.join(", ") },
       ];
 
+      // Replace the profile area with a full profile card layout.
       profile.innerHTML = `
         <div class="profile-header">
           <div>
@@ -1006,7 +1106,7 @@
     }
   }
 
-
+  // Loads records that need manual review and renders the Review Queue table.
   async function loadReviews() {
     const table = document.getElementById("reviewsTable");
     table.innerHTML = "<p>Loading review queue...</p>";
@@ -1020,6 +1120,7 @@
         return;
       }
 
+      // Build one table row per review item returned by the backend.
       let html = "<table><thead><tr><th>Review ID</th><th>Source</th><th>Program</th><th>Name</th><th>DOB</th><th>Possible NSV ID</th><th>Confidence</th><th>Reason</th></tr></thead><tbody>";
       reviews.forEach(r => {
         html += `<tr><td>${r.review_id}</td><td>${r.source_system}</td><td>${r.program_name ?? ""}</td><td>${r.suggested_first_name ?? ""} ${r.suggested_last_name ?? ""}</td><td>${r.suggested_dob ?? ""}</td><td>${r.possible_nsv_client_id ?? ""}</td><td>${r.confidence_score}</td><td>${r.review_reason}</td></tr>`;
@@ -1031,6 +1132,7 @@
     }
   }
 
+  // Store references to the upload UI elements so later functions can update them.
   const dropZone = document.getElementById("dropZone");
   const fileInput = document.getElementById("fileInput");
   const previewSection = document.getElementById("previewSection");
@@ -1041,8 +1143,10 @@
   const importButton = document.getElementById("importButton");
   const message = document.getElementById("message");
 
+  // The backend returns this after previewing a file; the import step sends it back.
   let currentUploadId = null;
 
+  // These are the system fields a spreadsheet column can map into.
   const systemFields = [
     { value: "", label: "Do not import / ignore" },
     { value: "first_name", label: "First Name" },
@@ -1060,17 +1164,21 @@
     { value: "status", label: "Status" }
   ];
 
+  // Clicking the visible drop zone opens the hidden file input.
   dropZone.addEventListener("click", () => fileInput.click());
 
+  // Give visual feedback while a file is dragged over the drop zone.
   dropZone.addEventListener("dragover", (event) => {
     event.preventDefault();
     dropZone.classList.add("dragover");
   });
 
+  // Remove drag styling when the file leaves the drop zone.
   dropZone.addEventListener("dragleave", () => {
     dropZone.classList.remove("dragover");
   });
 
+  // Handle drag-and-drop file selection.
   dropZone.addEventListener("drop", (event) => {
     event.preventDefault();
     dropZone.classList.remove("dragover");
@@ -1078,17 +1186,21 @@
     if (file) uploadPreview(file);
   });
 
+  // Handle normal file picker selection.
   fileInput.addEventListener("change", (event) => {
     const file = event.target.files[0];
     if (file) uploadPreview(file);
   });
 
+  // First step of client import: upload the file and ask the backend for a preview.
   async function uploadPreview(file) {
     showMessage("Uploading and reading preview...");
 
+    // FormData sends the selected CSV/Excel file as multipart form data.
     const formData = new FormData();
     formData.append("file", file);
 
+    // The backend saves the file and returns columns plus the first preview rows.
     const response = await fetch("/upload/preview", {
       method: "POST",
       body: formData
@@ -1101,8 +1213,10 @@
 
     const data = await response.json();
 
+    // Save the upload ID so the later import request knows which saved file to import.
     currentUploadId = data.upload_id;
 
+    // Show both the raw preview and the column mapping controls.
     renderPreview(data);
     renderMapping(data.columns);
 
@@ -1111,6 +1225,7 @@
     showMessage("File preview loaded. Map the columns, then import.");
   }
 
+  // Displays the uploaded file name, row count, and first preview rows.
   function renderPreview(data) {
     fileInfo.innerHTML = `
       <p><strong>File:</strong> ${data.file_name}</p>
@@ -1122,6 +1237,7 @@
       return;
     }
 
+    // Build the preview table using the columns and rows returned by the backend.
     let html = "<table><thead><tr>";
     data.columns.forEach(col => html += `<th>${col}</th>`);
     html += "</tr></thead><tbody>";
@@ -1138,6 +1254,7 @@
     previewTable.innerHTML = html;
   }
 
+  // Guesses a system field from a spreadsheet column name.
   function guessField(columnName) {
     const c = columnName.toLowerCase().trim();
 
@@ -1158,6 +1275,7 @@
     return "";
   }
 
+  // Escapes text before injecting it into generated HTML strings.
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -1167,12 +1285,14 @@
       .replaceAll("'", "&#039;");
   }
 
+  // Builds the column mapping table after a file preview is loaded.
   function renderMapping(columns) {
     let html = "<table><thead><tr><th>Spreadsheet Column</th><th>Map To</th></tr></thead><tbody>";
 
     columns.forEach(col => {
       html += `<tr><td>${col}</td><td><select data-column="${col}">`;
 
+      // Pre-select a likely mapping when the column name is recognized.
       const guessed = guessField(col);
 
       systemFields.forEach(field => {
@@ -1187,20 +1307,24 @@
     mappingForm.innerHTML = html;
   }
 
+  // Final client import step: send source/program/mapping data to the backend.
   importButton.addEventListener("click", async () => {
     const sourceSystem = document.getElementById("sourceSystem").value;
     const programName = document.getElementById("programName").value.trim();
 
+    // A previewed upload is required before importing.
     if (!currentUploadId) {
       showMessage("Please upload a file first.");
       return;
     }
 
+    // Source and program are required context for every imported row.
     if (!sourceSystem || !programName) {
       showMessage("Please enter both source system and program name.");
       return;
     }
 
+    // Convert the mapping dropdown selections into a JSON object.
     const selects = mappingForm.querySelectorAll("select");
     const columnMapping = {};
 
@@ -1214,6 +1338,7 @@
 
     showMessage("Importing data...");
 
+    // Tell the backend to import the saved upload using the selected mappings.
     const response = await fetch("/upload/import", {
       method: "POST",
       headers: {
@@ -1234,6 +1359,7 @@
       return;
     }
 
+    // Show the import summary returned by the backend.
     showMessage(
       `Import complete.\n\n` +
       `Rows processed: ${result.rows_processed}\n` +
@@ -1243,9 +1369,11 @@
       `Rows failed: ${result.rows_failed}`
     );
 
+    // Refresh overview counts so the dashboard reflects the import.
     loadStats();
   });
 
+  // Displays status text in the Upload Data tab message box.
   function showMessage(text) {
     message.style.display = "block";
     message.textContent = text;

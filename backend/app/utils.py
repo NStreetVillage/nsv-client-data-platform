@@ -1,9 +1,18 @@
+"""Shared data-cleaning helpers for imports, matching, and search.
+
+The functions here keep common formatting rules in one place: cleaning names,
+normalizing names for comparison, parsing dates from messy source files, and
+generating NSV client IDs.
+"""
+
 import re
 from datetime import datetime, date
 from typing import Optional
 
 
 def clean_name(value: str) -> str:
+    """Trim extra whitespace and convert a name to title case."""
+
     if value is None:
         return ""
     value = str(value).strip()
@@ -12,6 +21,8 @@ def clean_name(value: str) -> str:
 
 
 def normalize_for_match(value: str) -> str:
+    """Make names comparable by lowercasing and removing punctuation."""
+
     if value is None:
         return ""
     value = str(value).strip().lower()
@@ -21,6 +32,8 @@ def normalize_for_match(value: str) -> str:
 
 
 def parse_date(value) -> Optional[date]:
+    """Parse dates from the different formats found in source exports."""
+
     if value is None:
         return None
 
@@ -93,10 +106,14 @@ def parse_date_candidates(value) -> list[date]:
 
 
 def generate_nsv_id(next_number: int) -> str:
+    """Format a database sequence number as an NSV client ID."""
+
     return f"NSV-{next_number:06d}"
 
 
 def split_full_name(full_name: str):
+    """Split a single full-name field into first and last name pieces."""
+
     cleaned = clean_name(full_name)
     if not cleaned:
         return "", ""

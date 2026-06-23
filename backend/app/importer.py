@@ -1,3 +1,11 @@
+"""Spreadsheet preview, normalization, matching, and client import logic.
+
+This is the main data-ingestion file for client CSV/Excel uploads. The frontend
+uploads a file, main.py calls preview_file() for a sample, and later calls
+import_file() to create/match clients, record source rows, add program
+enrollments, and create review records when matching is uncertain.
+"""
+
 import json
 from pathlib import Path
 from typing import Dict, Optional
@@ -11,9 +19,12 @@ from .utils import clean_name, normalize_for_match, parse_date, generate_nsv_id,
 
 
 class UnsupportedClientImportError(ValueError):
+    """Raised when a client import endpoint receives a metrics/planning file."""
+
     pass
 
 
+# Known source column names mapped to the canonical field names used internally.
 DEFAULT_COLUMN_ALIASES = {
     "first_name": [
         "first_name", "first name", "firstname", "client first name", "patient first name",
@@ -60,6 +71,7 @@ DEFAULT_COLUMN_ALIASES = {
 }
 
 
+# Extra source columns that should be kept as SourceDetail records for profiles.
 SOURCE_DETAIL_FIELDS = {
     "full_name": "source_full_name",
     "first_name": "source_first_name",
@@ -123,6 +135,7 @@ SOURCE_DETAIL_FIELDS = {
     "Relationship to Head of Household": "relationship_to_head_of_household",
 }
 
+# Fields that belong directly to the client/enrollment import model.
 CORE_FIELDS = {
     "first_name",
     "last_name",
@@ -141,6 +154,8 @@ CORE_FIELDS = {
 
 
 def safe_str(value):
+    """Convert spreadsheet cells into clean strings or None for empty values."""
+
     if value is None or pd.isna(value):
         return None
     text = str(value).strip()
@@ -150,12 +165,17 @@ def safe_str(value):
 
 
 def is_metrics_layout(df: pd.DataFrame) -> bool:
+    """Detect whether a dataframe looks like a program metrics/planning sheet."""
+
     normalized_columns = {str(c).strip().lower() for c in df.columns}
     return {"program", "target", "metric", "method"}.issubset(normalized_columns)
 
 
 def load_file(path: Path, allow_metrics: bool = False) -> pd.DataFrame:
+    """Read a CSV or Excel file into a dataframe and normalize its layout."""
+
     if path.suffix.lower() == ".csv":
+        # Source files may come from different systems, so try common encodings.
         for encoding in ["utf-8-sig", "utf-16", "latin1"]:
             try:
                 df = pd.read_csv(path, encoding=encoding, sep=None, engine="python")
@@ -173,6 +193,8 @@ def load_file(path: Path, allow_metrics: bool = False) -> pd.DataFrame:
 
 
 def normalize_csv_layout(df: pd.DataFrame, allow_metrics: bool = False) -> pd.DataFrame:
+    """Fix common CSV layout issues before previewing or importing."""
+
     if is_metrics_layout(df):
         if allow_metrics:
             return df
@@ -183,6 +205,7 @@ def normalize_csv_layout(df: pd.DataFrame, allow_metrics: bool = False) -> pd.Da
     if score_identity_columns(df.columns) > 0:
         return df
 
+    # Some reports have title rows above the real header. Look for a header row.
     for row_index, row in df.head(10).iterrows():
         values = [safe_str(value) for value in row.tolist()]
         normalized_values = {value.strip().lower() for value in values if value}
@@ -206,6 +229,8 @@ def normalize_csv_layout(df: pd.DataFrame, allow_metrics: bool = False) -> pd.Da
 
 
 def score_identity_columns(columns) -> int:
+    """Score how many known identity columns appear in a sheet."""
+
     normalized = {str(c).strip().lower() for c in columns}
     score = 0
     for aliases in DEFAULT_COLUMN_ALIASES.values():
@@ -215,6 +240,8 @@ def score_identity_columns(columns) -> int:
 
 
 def read_best_excel_sheet(path: Path, allow_metrics: bool = False) -> pd.DataFrame:
+    """Pick the Excel sheet that looks most like a client import sheet."""
+
     sheets = pd.read_excel(path, sheet_name=None)
     best_sheet = None
     best_score = -1
@@ -239,6 +266,8 @@ def read_best_excel_sheet(path: Path, allow_metrics: bool = False) -> pd.DataFra
 
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Rename recognized source columns to canonical internal field names."""
+
     lower_map = {str(c).strip().lower(): c for c in df.columns}
     rename_map = {}
 
@@ -252,10 +281,13 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def apply_column_mapping(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFrame:
+    """Apply the user's frontend column mapping to the dataframe."""
+
     clean_mapping = {}
     used_targets = set()
 
     for source, target in mapping.items():
+        # Ignore blank mappings and prevent two source columns from mapping to one target.
         if not target or target in used_targets:
             continue
         clean_mapping[source] = target
@@ -265,16 +297,22 @@ def apply_column_mapping(df: pd.DataFrame, mapping: Dict[str, str]) -> pd.DataFr
 
 
 def normalize_import_columns(df: pd.DataFrame, mapping: Optional[Dict[str, str]] = None) -> pd.DataFrame:
+    """Apply user mappings first, then apply known automatic aliases."""
+
     if mapping:
         df = apply_column_mapping(df, mapping)
     return normalize_columns(df)
 
 
 def get_next_client_number(db: Session) -> int:
+    """Return the next number used to generate an NSV client ID."""
+
     return db.query(Client).count() + 1
 
 
 def get_or_create_program(db: Session, program_name: str, source_system: str) -> Program:
+    """Find an existing program or create it during import."""
+
     program = db.query(Program).filter(Program.program_name == program_name).first()
     if program:
         return program
@@ -287,6 +325,8 @@ def get_or_create_program(db: Session, program_name: str, source_system: str) ->
 
 
 def preview_file(file_path: str, max_rows: int = 10):
+    """Return file metadata, columns, and sample rows for the frontend preview."""
+
     path = Path(file_path)
     df = load_file(path, allow_metrics=True)
     return {
@@ -299,18 +339,24 @@ def preview_file(file_path: str, max_rows: int = 10):
 
 
 def find_by_hmis_id(db: Session, hmis_id: Optional[str]):
+    """Find a client by HMIS ID when the source row provides one."""
+
     if not hmis_id:
         return None
     return db.query(Client).filter(Client.hmis_id == hmis_id).first()
 
 
 def find_by_ecw_id(db: Session, ecw_id: Optional[str]):
+    """Find a client by eCW ID when the source row provides one."""
+
     if not ecw_id:
         return None
     return db.query(Client).filter(Client.ecw_id == ecw_id).first()
 
 
 def find_by_name_dob(db: Session, first_name: str, last_name: str, dob):
+    """Find a client when first name, last name, and DOB all match."""
+
     if not first_name or not last_name or not dob:
         return None
 
@@ -326,6 +372,8 @@ def find_by_name_dob(db: Session, first_name: str, last_name: str, dob):
 
 
 def find_name_only_candidates(db: Session, first_name: str, last_name: str):
+    """Find exact normalized name matches when DOB is unavailable."""
+
     if not first_name or not last_name:
         return []
 
@@ -347,6 +395,8 @@ def find_name_only_candidates(db: Session, first_name: str, last_name: str):
 
 
 def find_by_partial_identity(db: Session, first_name: str, last_name: str, dob):
+    """Find weaker candidates when only part of the identity matches."""
+
     if not first_name and not last_name and not dob:
         return []
 
@@ -375,9 +425,12 @@ def find_by_partial_identity(db: Session, first_name: str, last_name: str, dob):
 
 
 def extract_identity(row):
+    """Extract the identity fields needed for client matching from one row."""
+
     full_name = safe_str(row.get("full_name")) if "full_name" in row else None
     backup_name = get_first_present_value(row, ["Client Name", "Patient Name", "Preferred Name", "Name"])
 
+    # Some JotForm-style values label a row as returning/new instead of giving a name.
     if full_name:
         normalized_full_name = full_name.strip().lower()
         if normalized_full_name in ["new client", "returning", "returning client"]:
@@ -404,6 +457,8 @@ def extract_identity(row):
 
 
 def get_first_present_value(row, column_names):
+    """Return the first non-empty value found across possible source column names."""
+
     for column_name in column_names:
         if column_name in row:
             value = safe_str(row.get(column_name))
@@ -413,9 +468,12 @@ def get_first_present_value(row, column_names):
 
 
 def extract_enrollment_dates(row):
+    """Extract entry/exit dates for the Enrollment row."""
+
     entry_date = parse_date(row.get("entry_date", None)) if "entry_date" in row else None
     exit_date = parse_date(row.get("exit_date", None)) if "exit_date" in row else None
 
+    # Housing files may use lease-up or placement dates instead of entry_date.
     if not entry_date:
         entry_date = parse_date(get_first_present_value(row, [
             "Current Lease-up Date",
@@ -427,6 +485,8 @@ def extract_enrollment_dates(row):
 
 
 def extract_status(row):
+    """Extract a simple program status from source-specific status columns."""
+
     status = safe_str(row.get("status")) if "status" in row else None
     housed = get_first_present_value(row, ["Housed", "housed"])
     exited = get_first_present_value(row, ["Exited", "exited"])
@@ -439,10 +499,13 @@ def extract_status(row):
 
 
 def add_source_details(db, row, client, source_system, program_name, path):
+    """Store useful non-core source fields for later profile display."""
+
     normalized_columns = {str(column).strip().lower(): column for column in row.index}
     captured_columns = set()
 
     for source_column, field_name in SOURCE_DETAIL_FIELDS.items():
+        # Match source columns case-insensitively.
         actual_column = normalized_columns.get(source_column.lower())
         if not actual_column:
             continue
@@ -507,6 +570,8 @@ def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
 
 
 def create_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id, row):
+    """Create a new master client record from one import row."""
+
     nsv_id = generate_nsv_id(get_next_client_number(db))
     client = Client(
         nsv_client_id=nsv_id,
@@ -527,6 +592,8 @@ def create_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id, row)
 
 
 def update_client_from_row(client, hmis_id, ecw_id, dob, row):
+    """Fill missing client fields from a matched source row."""
+
     if hmis_id and not client.hmis_id:
         client.hmis_id = hmis_id
     if ecw_id and not client.ecw_id:
@@ -541,6 +608,8 @@ def update_client_from_row(client, hmis_id, ecw_id, dob, row):
 
 
 def add_review_record(db, row, source_system, program_name, path, possible_client, first_name, last_name, dob, confidence, reason):
+    """Create a review queue item for uncertain or ambiguous matches."""
+
     review = PotentialMatch(
         source_system=source_system,
         program_name=program_name,
@@ -564,10 +633,15 @@ def import_file(
     program_name: str,
     column_mapping: Optional[Dict[str, str]] = None,
 ):
+    """Import a client CSV/Excel file into master clients and related tables."""
+
     path = Path(file_path)
+
+    # Read the file and normalize column names before processing rows.
     df = load_file(path)
     df = normalize_import_columns(df, column_mapping)
 
+    # Track import results so the frontend can show a summary.
     rows_processed = 0
     rows_created = 0
     rows_matched = 0
@@ -577,18 +651,22 @@ def import_file(
 
     program = get_or_create_program(db, program_name, source_system)
 
+    # Process each spreadsheet row independently so one bad row does not stop the import.
     for _, row in df.iterrows():
         rows_processed += 1
 
         try:
+            # Pull out identity fields and decide whether to match, create, review, or fail.
             first_name, last_name, dob, hmis_id, ecw_id = extract_identity(row)
             client, match_method, confidence, action = match_client(db, first_name, last_name, dob, hmis_id, ecw_id)
 
+            # Rows without enough identity data cannot be imported.
             if action == "failed":
                 rows_failed += 1
                 failed_rows.append({"row": rows_processed, "reason": match_method})
                 continue
 
+            # Ambiguous rows are saved for manual review instead of auto-matching.
             if action == "review":
                 rows_review += 1
                 add_review_record(
@@ -607,6 +685,7 @@ def import_file(
                 db.commit()
                 continue
 
+            # Either create a new client or update missing fields on an existing match.
             if action == "create":
                 client = create_client(db, first_name, last_name, dob, hmis_id, ecw_id, row)
                 rows_created += 1
@@ -617,6 +696,7 @@ def import_file(
 
             source_client_id = hmis_id or ecw_id
 
+            # Store the original row and matching explanation for traceability.
             db.add(ClientSource(
                 nsv_client_id=client.nsv_client_id,
                 source_system=source_system,
@@ -627,11 +707,13 @@ def import_file(
                 confidence_score=confidence,
             ))
 
+            # Store additional source-specific details for the client profile.
             add_source_details(db, row, client, source_system, program_name, path)
 
             entry_date, exit_date = extract_enrollment_dates(row)
             status = extract_status(row)
 
+            # Add a program enrollment/activity row for this imported source row.
             db.add(Enrollment(
                 nsv_client_id=client.nsv_client_id,
                 program_id=program.program_id,
@@ -643,10 +725,12 @@ def import_file(
             db.commit()
 
         except Exception as error:
+            # Roll back this row only, count it as failed, and continue importing.
             db.rollback()
             rows_failed += 1
             failed_rows.append({"row": rows_processed, "reason": str(error)})
 
+    # Save a final summary row for the import history.
     db.add(ImportLog(
         file_name=path.name,
         source_system=source_system,

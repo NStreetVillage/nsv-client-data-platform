@@ -1,3 +1,9 @@
+"""Import and summarize non-client program metrics/planning sheets.
+
+Metrics files are stored separately from client imports because they describe
+program planning targets and monthly values rather than individual people.
+"""
+
 import json
 import re
 from pathlib import Path
@@ -9,10 +15,13 @@ from .importer import is_metrics_layout, load_file, safe_str
 from .models import ProgramMetric
 
 
+# Metrics sheets use month columns such as "Jan-26"; this pattern detects them.
 MONTH_COLUMN_PATTERN = re.compile(r"^[A-Za-z]{3}-\d{2}$")
 
 
 def import_metrics_file(db: Session, file_path: str):
+    """Read a metrics spreadsheet and store each meaningful row."""
+
     path = Path(file_path)
     df = load_file(path, allow_metrics=True)
 
@@ -25,14 +34,17 @@ def import_metrics_file(db: Session, file_path: str):
     for _, row in df.iterrows():
         rows_processed += 1
 
+        # These four columns are the minimum shape of a planning/metrics row.
         program = safe_str(row.get("Program"))
         target = safe_str(row.get("Target"))
         metric = safe_str(row.get("Metric"))
         method = safe_str(row.get("Method"))
 
+        # Skip empty spacer rows from spreadsheets.
         if not any([program, target, metric, method]):
             continue
 
+        # Preserve month columns as JSON so the schema can handle changing months.
         month_values = {}
         for column in row.index:
             column_name = str(column).strip()
@@ -63,13 +75,18 @@ def import_metrics_file(db: Session, file_path: str):
 
 
 def get_metrics_summary(db: Session):
+    """Build the overview summary shown in the metrics panel."""
+
     total = db.query(ProgramMetric).count()
+
+    # The latest row tells us which file was most recently imported.
     latest = (
         db.query(ProgramMetric)
         .order_by(ProgramMetric.imported_at.desc(), ProgramMetric.metric_id.desc())
         .first()
     )
 
+    # Collect unique program names for a compact "programs covered" summary.
     program_rows = (
         db.query(ProgramMetric.program)
         .filter(ProgramMetric.program.isnot(None))
@@ -77,6 +94,7 @@ def get_metrics_summary(db: Session):
     )
     programs = sorted({row.program for row in program_rows if row.program})
 
+    # Show a small recent sample on the Overview tab.
     recent_metrics = (
         db.query(ProgramMetric)
         .order_by(ProgramMetric.imported_at.desc(), ProgramMetric.metric_id.desc())

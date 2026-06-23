@@ -37,7 +37,7 @@ Tableau dashboards, data quality review, and future AI insights
 
 ## Current Local Setup
 
-Local development currently uses SQLite for speed and simplicity.
+Local development currently uses SQLite for speed and simplicity. PostgreSQL is still the preferred long-term database for production/shared reporting, but SQLite is easier for local demo testing.
 
 The local environment file is:
 
@@ -45,47 +45,117 @@ The local environment file is:
 backend/.env
 ```
 
-Recommended local demo settings:
+Current local demo settings:
 
 ```env
-DATABASE_URL=sqlite:///./nsv_data.db
+DATABASE_URL=sqlite:///./nsv_data_clean.db
 UPLOAD_DIR=uploads
 ```
 
-PostgreSQL is still the preferred long-term database, but SQLite avoids local PostgreSQL setup issues while testing the upload/import demo.
+Do not commit `.env`, local database files, uploaded spreadsheets, or real client data.
 
-## Run Locally
+## How To Run Locally
 
-From the repository root:
+Use Windows PowerShell from the repository root.
+
+### 1. Go to the project folder
+
+```powershell
+cd C:\Users\idbon\Desktop\NstreetVillage\Nstreetvillageproject\nsv-client-data-platform
+```
+
+### 2. Activate the virtual environment
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Your prompt should show `(.venv)` after activation.
+
+If the virtual environment does not exist yet, create it and install dependencies:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r backend\requirements.txt
+```
+
+### 3. Move into the backend folder
+
+```powershell
+cd backend
+```
+
+### 4. Create or update database tables
+
+Run this every time a new table/model is added, or whenever you reset the local database:
+
+```powershell
+python scripts\create_tables.py
+```
+
+This creates missing tables only. It does not erase existing data.
+
+### 5. Optional: repair missing DOBs from existing imports
+
+Run this only when existing imported clients have blank DOBs but the raw source rows contain DOB values:
+
+```powershell
+python scripts\backfill_missing_dobs.py
+```
+
+This only fills missing DOBs. It does not overwrite existing DOBs.
+
+### 6. Start the FastAPI server
+
+Recommended local demo command:
+
+```powershell
+uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
+```
+
+Keep this PowerShell window open while using the app. To stop the server, press:
+
+```text
+Ctrl + C
+```
+
+### 7. Open the app in the browser
+
+```text
+http://127.0.0.1:8001/upload-page
+```
+
+Swagger/API docs:
+
+```text
+http://127.0.0.1:8001/docs
+```
+
+### If port 8001 is already busy
+
+Use another port, such as `8002`:
+
+```powershell
+uvicorn app.main:app --host 127.0.0.1 --port 8002 --reload
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8002/upload-page
+```
+
+### Quick restart checklist
+
+When you close PowerShell and need to run the app again:
 
 ```powershell
 cd C:\Users\idbon\Desktop\NstreetVillage\Nstreetvillageproject\nsv-client-data-platform
 .\.venv\Scripts\Activate.ps1
-```
-
-Create database tables:
-
-```powershell
 cd backend
 python scripts\create_tables.py
-```
-
-Start the API:
-
-```powershell
-uvicorn app.main:app --reload
-```
-
-Open the upload page:
-
-```text
-http://127.0.0.1:8000/upload-page
-```
-
-Open Swagger/API docs:
-
-```text
-http://127.0.0.1:8000/docs
+uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
 ```
 
 ## Project Structure
