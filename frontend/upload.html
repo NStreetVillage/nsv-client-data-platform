@@ -11,35 +11,50 @@
   <style>
     /* Shared color variables used throughout the page. */
     :root {
-      --bg: #f6f7f9;
-      --panel: #ffffff;
-      --border: #e5e7eb;
-      --muted: #6b7280;
-      --text: #111827;
-      --accent: #111827;
-      --soft: #f3f4f6;
-      --warning: #fff7ed;
-      --warning-border: #fed7aa;
+      --bg: #f4f7f7;
+      --panel: #fbf7f4;
+      --panel-strong: #f7efeb;
+      --surface: #f8fbfb;
+      --surface-strong: #edf6f7;
+      --border: #d9e5e5;
+      --muted: #4d4f53;
+      --text: #0c2340;
+      --accent: #036b77;
+      --accent-dark: #0c2340;
+      --accent-soft: #e7f3f4;
+      --soft: #edf3f3;
+      --sidebar: #0c2340;
+      --sidebar-muted: #c6d4d8;
+      --warning: #fff8e6;
+      --warning-border: #f7d880;
     }
 
     /* Base page styling. */
+    html {
+      height: 100%;
+      overflow: hidden;
+    }
+
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       background: var(--bg);
       color: var(--text);
+      height: 100%;
+      overflow: hidden;
     }
 
     /* Main two-column layout: sidebar navigation + content area. */
     .app-shell {
       display: grid;
       grid-template-columns: 260px 1fr;
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
     }
 
     /* Left navigation panel. */
     .sidebar {
-      background: #111827;
+      background: var(--sidebar);
       color: white;
       padding: 24px 18px;
     }
@@ -51,7 +66,7 @@
     }
 
     .sidebar p {
-      color: #d1d5db;
+      color: var(--sidebar-muted);
       margin: 0 0 24px 0;
       font-size: 13px;
     }
@@ -61,7 +76,7 @@
       width: 100%;
       background: transparent;
       border: 1px solid transparent;
-      color: #e5e7eb;
+      color: #e6eef0;
       text-align: left;
       padding: 12px 14px;
       border-radius: 10px;
@@ -71,25 +86,28 @@
     }
 
     .tab-button:hover {
-      background: rgba(255,255,255,0.08);
+      background: rgba(139, 192, 199, 0.16);
     }
 
     .tab-button.active {
-      background: white;
-      color: #111827;
+      background: var(--accent-soft);
+      color: var(--accent-dark);
     }
 
     .main {
-      padding: 32px;
+      padding: 40px 44px 72px;
+      height: 100vh;
+      overflow: auto;
+      box-sizing: border-box;
     }
 
-    /* Reusable white content containers. */
+    /* Reusable content containers. */
     .header-card, .panel {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 6px 20px rgba(0,0,0,.05);
+      box-shadow: 0 6px 20px rgba(12,35,64,.04);
       margin-bottom: 22px;
     }
 
@@ -104,26 +122,41 @@
 
     .tab-content {
       display: none;
+      max-width: 1480px;
+      margin: 0 auto;
     }
 
     .tab-content.active {
       display: block;
     }
 
+    #clients.tab-content.active {
+      height: calc(100vh - 112px);
+      max-width: 1680px;
+      overflow: hidden;
+    }
+
+    #clients .panel {
+      max-height: calc(100vh - 250px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     /* Drag-and-drop upload box. */
     .drop-zone {
-      border: 2px dashed #9ca3af;
+      border: 2px dashed #8bc0c7;
       border-radius: 14px;
       padding: 45px;
       text-align: center;
       cursor: pointer;
-      background: #f9fafb;
+      background: var(--surface);
       margin-bottom: 24px;
     }
 
     .drop-zone.dragover {
-      background: #eef2ff;
-      border-color: #4f46e5;
+      background: var(--accent-soft);
+      border-color: var(--accent);
     }
 
     input[type="file"] {
@@ -140,11 +173,13 @@
 
     input, select, textarea {
       padding: 10px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #cbdadb;
       border-radius: 8px;
       width: 100%;
       box-sizing: border-box;
       font-family: Arial, sans-serif;
+      background: #fffdfb;
+      color: var(--text);
     }
 
     /* Responsive grid helpers used by multiple tabs. */
@@ -162,7 +197,7 @@
 
     /* Overview dashboard stat cards. */
     .stat {
-      background: var(--soft);
+      background: var(--surface-strong);
       padding: 18px;
       border-radius: 14px;
       border: 1px solid var(--border);
@@ -176,10 +211,10 @@
 
     .placeholder {
       padding: 24px;
-      border: 1px dashed #9ca3af;
+      border: 1px dashed #8bc0c7;
       border-radius: 14px;
-      background: #f9fafb;
-      color: #374151;
+      background: var(--surface);
+      color: var(--muted);
     }
 
     /* Primary and secondary button styles. */
@@ -195,15 +230,15 @@
     }
 
     button.primary:disabled {
-      background: #9ca3af;
+      background: #8aa3a7;
       cursor: not-allowed;
     }
 
     button.secondary {
       padding: 8px 10px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #cbdadb;
       border-radius: 8px;
-      background: white;
+      background: var(--surface);
       color: var(--text);
       cursor: pointer;
       font-weight: bold;
@@ -264,6 +299,7 @@
       align-items: start;
       margin-top: 18px;
       overflow: hidden;
+      min-height: 0;
       transition: grid-template-columns 220ms ease, gap 220ms ease;
     }
 
@@ -274,11 +310,23 @@
 
     #clientsTable {
       min-width: 0;
-      max-height: calc(100vh - 330px);
+      max-height: calc(100vh - 450px);
       overflow: auto;
       border: 1px solid var(--border);
       border-radius: 12px;
-      background: white;
+      background: var(--surface);
+    }
+
+    #clientsTable td {
+      background: #fffdfb;
+    }
+
+    #clientsTable tbody tr:nth-child(even) td {
+      background: #f3f8f8;
+    }
+
+    #clientsTable tbody tr:hover td {
+      background: var(--accent-soft);
     }
 
     #clientsTable table {
@@ -306,9 +354,9 @@
       overflow-y: auto;
       border: 1px solid var(--border);
       border-radius: 14px;
-      background: white;
+      background: var(--panel-strong);
       padding: 18px;
-      box-shadow: 0 6px 20px rgba(0,0,0,.05);
+      box-shadow: 0 6px 20px rgba(12,35,64,.06);
       opacity: 0;
       visibility: hidden;
       transform: translateX(32px);
@@ -351,7 +399,7 @@
     .profile-card {
       border: 1px solid var(--border);
       border-radius: 12px;
-      background: #ffffff;
+      background: #fffdfb;
       padding: 16px;
       min-height: 92px;
     }
@@ -359,8 +407,8 @@
     .profile-card.large {
       grid-column: span 1;
       grid-row: span 1;
-      background: #f8fafc;
-      border-color: #cbd5e1;
+      background: var(--accent-soft);
+      border-color: #8bc0c7;
     }
 
     .profile-card.wide {
@@ -397,8 +445,8 @@
     .chip {
       display: inline-flex;
       align-items: center;
-      border: 1px solid #d1d5db;
-      background: #f9fafb;
+      border: 1px solid #cbdadb;
+      background: var(--surface);
       border-radius: 999px;
       padding: 6px 9px;
       font-size: 13px;
@@ -436,7 +484,7 @@
 
     /* Required-field marker and informational banner styles. */
     .required {
-      color: #b91c1c;
+      color: #840b55;
     }
 
     .banner {
