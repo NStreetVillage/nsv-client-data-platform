@@ -930,7 +930,7 @@
       // Build one table row per client. The View button opens the profile panel.
       let html = "<table><thead><tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th><th>Profile</th></tr></thead><tbody>";
       clients.forEach(c => {
-        html += `<tr><td>${escapeHtml(c.nsv_client_id)}</td><td>${escapeHtml(c.first_name)}</td><td>${escapeHtml(c.last_name)}</td><td>${escapeHtml(c.date_of_birth ?? "")}</td><td>${escapeHtml(c.hmis_id ?? "")}</td><td>${escapeHtml(c.ecw_id ?? "")}</td><td><button class="secondary" onclick="viewClientProfile('${escapeHtml(c.nsv_client_id)}')">View</button></td></tr>`;
+        html += `<tr><td>${escapeHtml(c.nsv_client_id)}</td><td>${escapeHtml(c.first_name)}</td><td>${escapeHtml(c.last_name)}</td><td>${escapeHtml(c.date_of_birth ?? "N/A")}</td><td>${escapeHtml(c.hmis_id ?? "N/A")}</td><td>${escapeHtml(c.ecw_id ?? "N/A")}</td><td><button class="secondary" onclick="viewClientProfile('${escapeHtml(c.nsv_client_id)}')">View</button></td></tr>`;
       });
       html += "</tbody></table>";
       table.innerHTML = html;
@@ -1033,10 +1033,10 @@
 
       // These arrays are rendered by renderDetailRows below.
       const identityRows = [
-        { label: "DOB", value: client.date_of_birth },
-        { label: "NSV ID", value: client.nsv_client_id },
-        { label: "HMIS ID", value: client.hmis_id },
-        { label: "eCW ID", value: client.ecw_id },
+{ label: "DOB", value: client.date_of_birth ?? "N/A" },
+        { label: "NSV ID", value: client.nsv_client_id ?? "N/A" },
+        { label: "HMIS ID", value: client.hmis_id ?? "N/A" },
+        { label: "eCW ID", value: client.ecw_id ?? "N/A" },
       ];
       const personalRows = [
         { label: "Language", value: getDetailValues(details, "primary_language")[0] },
@@ -1055,8 +1055,7 @@
         <div class="profile-header">
           <div>
             <h2>${escapeHtml(client.first_name)} ${escapeHtml(client.last_name)}</h2>
-            <p class="profile-subtitle">${escapeHtml(client.nsv_client_id)}${client.date_of_birth ? ` · DOB ${escapeHtml(client.date_of_birth)}` : ""}</p>
-          </div>
+<p class="profile-subtitle">${escapeHtml(client.nsv_client_id ?? "N/A")} · DOB ${escapeHtml(client.date_of_birth ?? "N/A")}</p>          </div>
           <button class="secondary" onclick="document.getElementById('clientProfile').style.display='none'">Close</button>
         </div>
 
