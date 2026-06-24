@@ -72,6 +72,9 @@ DEFAULT_COLUMN_ALIASES = {
 
 
 # Extra source columns that should be kept as SourceDetail records for profiles.
+# Source details are the "extra" facts that do not belong on the core Client row.
+# They let one profile show JotForm, HTH, HMIS, and eCW-specific fields without
+# forcing every import format into the same fixed set of database columns.
 SOURCE_DETAIL_FIELDS = {
     "full_name": "source_full_name",
     "first_name": "source_first_name",
@@ -111,23 +114,44 @@ SOURCE_DETAIL_FIELDS = {
     "DCHA Application Status": "dcha_application_status",
     "# of days in PSH since referral": "days_in_psh_since_referral",
     "Source App": "source_app",
+    "Date of Intake": "date_of_intake",
     "What can we help you with today?": "services_requested",
+    "Would you like to meet with staff regarding potential benefits?": "benefits_staff_interest",
     "Are there any other services you would like to access at N Street Village?": "other_services_requested",
+    "Would you like additional information about any of the following?   *What might you be interested in accessing in the future*": "future_service_interest",
     "Are you receiving SNAP ?": "snap_status",
+    "Have you received a letter regarding work requirements ?": "snap_work_requirements_letter",
     "Are you a DC Resident?": "dc_resident",
+    "Do you have a photo ID?": "has_photo_id",
+    "State/Issuer": "photo_id_state_issuer",
     "Are you an NSV Resident?": "nsv_resident",
     "NSV Program": "nsv_program",
+    "Primary Race": "primary_race",
+    "Secondary Race": "secondary_race",
+    "Pronouns": "pronouns",
+    "Additional Pronouns": "additional_pronouns",
     "Primary Language": "primary_language",
     "Current Housing": "current_housing",
+    "Where/Address of where you are currently staying": "current_stay_location",
+    "How long have you been living in this situation?": "current_housing_duration",
+    "Reasons for being unhoused?": "reasons_for_unhoused",
+    "Are you linked to a service agency (ex. Volunteers of America, Pathways to Housing, etc.)": "linked_service_agency",
+    "Are you a military veteran?": "military_veteran",
     "Staff Completing Form": "staff_completing_form",
     "Encounter ID": "encounter_id",
     "Visit Type": "visit_type",
+    "Visit Sub-Type": "visit_sub_type",
     "Visit Status": "visit_status",
     "Visit Reason": "visit_reason",
+    "Patient Status": "patient_status",
+    "Patient Language": "patient_language",
+    "Appointment Facility Name": "appointment_facility_name",
     "Department Name": "department_name",
     "Practice Name": "practice_name",
-    "Appointment Facility Name": "appointment_facility_name",
     "Appointment Provider Name": "appointment_provider_name",
+    "Resource Provider Name": "resource_provider_name",
+    "Appointment Insurance Name": "appointment_insurance_name",
+    "Primary Insurance Name": "primary_insurance_name",
     "Project": "project",
     "Entry Type": "entry_type",
     "Exit Destination": "exit_destination",
@@ -394,6 +418,41 @@ def find_name_only_candidates(db: Session, first_name: str, last_name: str):
     return matches
 
 
+def find_name_variant_candidates(db: Session, first_name: str, last_name: str, dob=None):
+    """Find a unique first-name + last-initial/prefix match when DOB is missing."""
+
+    if not first_name or not last_name:
+        return []
+
+    nf = normalize_for_match(first_name)
+    nl = normalize_for_match(last_name)
+    if not nf or not nl:
+        return []
+
+    candidates = db.query(Client).filter(Client.first_name.ilike(first_name)).limit(25).all()
+    matches = []
+
+    for client in candidates:
+        client_first = normalize_for_match(client.first_name)
+        client_last = normalize_for_match(client.last_name)
+        if client_first != nf or not client_last:
+            continue
+
+        if dob and client.date_of_birth and client.date_of_birth != dob:
+            continue
+
+        incoming_is_initial = len(nl) == 1 and client_last.startswith(nl)
+        existing_is_initial = len(client_last) == 1 and nl.startswith(client_last)
+        short_prefix_match = min(len(nl), len(client_last)) >= 3 and (
+            nl.startswith(client_last) or client_last.startswith(nl)
+        )
+
+        if incoming_is_initial or existing_is_initial or short_prefix_match:
+            matches.append(client)
+
+    return matches
+
+
 def find_by_partial_identity(db: Session, first_name: str, last_name: str, dob):
     """Find weaker candidates when only part of the identity matches."""
 
@@ -437,6 +496,8 @@ def extract_identity(row):
             full_name = backup_name
         elif normalized_full_name.startswith("returning (") and full_name.endswith(")"):
             full_name = full_name[len("returning ("):-1].strip()
+        elif normalized_full_name.startswith("new client (") and full_name.endswith(")"):
+            full_name = full_name[len("new client ("):-1].strip()
 
     full_name = full_name or backup_name
 
@@ -454,6 +515,37 @@ def extract_identity(row):
     ecw_id = safe_str(row.get("ecw_id")) if "ecw_id" in row else None
 
     return first_name, last_name, dob, hmis_id, ecw_id
+
+
+def extract_jotform_client_status(row):
+    """Return JotForm's New Client/Returning signal when present."""
+
+    # JotForm exports can put "Returning" or "New Client (...)" in different
+    # columns depending on the form version, so check the likely places.
+    status_candidates = [
+        get_first_present_value(row, ["No Label", "Client Type", "Client Status", "Status"]),
+        safe_str(row.get("full_name")) if "full_name" in row else None,
+        get_first_present_value(row, ["Full Name", "Client Name", "Name"]),
+    ]
+
+    for value in status_candidates:
+        if not value:
+            continue
+        normalized = value.strip().lower()
+        if normalized.startswith("returning"):
+            return "Returning"
+        if normalized.startswith("new client"):
+            return "New Client"
+
+    return None
+
+
+def is_jotform_returning_row(row, source_system):
+    """Identify JotForm rows that say the person is returning."""
+
+    if "jotform" not in str(source_system or "").lower():
+        return False
+    return extract_jotform_client_status(row) == "Returning"
 
 
 def get_first_present_value(row, column_names):
@@ -525,6 +617,46 @@ def add_source_details(db, row, client, source_system, program_name, path):
         ))
         captured_columns.add(actual_column)
 
+    # Keep JotForm's returning/new-client signal visible in the profile even
+    # though it is not a standard identity field.
+    jotform_status = extract_jotform_client_status(row)
+    if jotform_status and "jotform" in str(source_system or "").lower():
+        db.add(SourceDetail(
+            nsv_client_id=client.nsv_client_id,
+            source_system=source_system,
+            program_name=program_name,
+            detail_type="Source Metadata",
+            field_name="jotform_client_status",
+            field_value=jotform_status,
+            original_file=path.name,
+        ))
+
+
+def add_identity_enrichment_detail(db, client, source_system, program_name, path, reason):
+    """Mark a profile that was imported without enough identity detail."""
+
+    existing = (
+        db.query(SourceDetail)
+        .filter(
+            SourceDetail.nsv_client_id == client.nsv_client_id,
+            SourceDetail.field_name == "identity_enrichment_status",
+            SourceDetail.field_value == reason,
+        )
+        .first()
+    )
+    if existing:
+        return
+
+    db.add(SourceDetail(
+        nsv_client_id=client.nsv_client_id,
+        source_system=source_system,
+        program_name=program_name,
+        detail_type="Identity Enrichment",
+        field_name="identity_enrichment_status",
+        field_value=reason,
+        original_file=path.name,
+    ))
+
 
 def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
     """
@@ -553,6 +685,10 @@ def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
     if len(name_candidates) == 1:
         return name_candidates[0], "Name only", 0.75, "matched"
 
+    name_variant_candidates = find_name_variant_candidates(db, first_name, last_name, dob)
+    if len(name_variant_candidates) == 1:
+        return name_variant_candidates[0], "Name variant", 0.68, "matched"
+
     partial_candidates = find_by_partial_identity(db, first_name, last_name, dob)
     if len(partial_candidates) == 1:
         return partial_candidates[0], "Partial identity", 0.70, "matched"
@@ -562,6 +698,9 @@ def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
 
     if len(name_candidates) > 1:
         return name_candidates[0], "Multiple name matches", 0.50, "review"
+
+    if len(name_variant_candidates) > 1:
+        return name_variant_candidates[0], "Multiple name variant matches", 0.50, "review"
 
     if not dob:
         return None, "New partial client", 0.60, "create"
@@ -659,6 +798,7 @@ def import_file(
             # Pull out identity fields and decide whether to match, create, review, or fail.
             first_name, last_name, dob, hmis_id, ecw_id = extract_identity(row)
             client, match_method, confidence, action = match_client(db, first_name, last_name, dob, hmis_id, ecw_id)
+            jotform_status = extract_jotform_client_status(row)
 
             # Rows without enough identity data cannot be imported.
             if action == "failed":
@@ -703,12 +843,24 @@ def import_file(
                 source_client_id=source_client_id,
                 original_file=path.name,
                 raw_data_json=json.dumps(row.to_dict(), default=str),
-                match_method=match_method,
+                match_method=f"{match_method} ({jotform_status})" if jotform_status else match_method,
                 confidence_score=confidence,
             ))
 
             # Store additional source-specific details for the client profile.
             add_source_details(db, row, client, source_system, program_name, path)
+
+            # DOB-less rows are allowed into the database, but tagged so later
+            # imports can fill the missing birthday when a match is found.
+            if not dob and not client.date_of_birth:
+                add_identity_enrichment_detail(
+                    db=db,
+                    client=client,
+                    source_system=source_system,
+                    program_name=program_name,
+                    path=path,
+                    reason="Needs DOB from another import",
+                )
 
             entry_date, exit_date = extract_enrollment_dates(row)
             status = extract_status(row)

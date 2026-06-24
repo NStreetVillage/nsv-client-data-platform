@@ -27,6 +27,18 @@
       --sidebar-muted: #c6d4d8;
       --warning: #fff8e6;
       --warning-border: #f7d880;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --space-xs: 6px;
+      --space-sm: 10px;
+      --space-md: 16px;
+      --space-lg: 22px;
+      --space-xl: 30px;
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     /* Base page styling. */
@@ -42,6 +54,7 @@
       color: var(--text);
       height: 100%;
       overflow: hidden;
+      line-height: 1.45;
     }
 
     /* Main two-column layout: sidebar navigation + content area. */
@@ -56,7 +69,7 @@
     .sidebar {
       background: var(--sidebar);
       color: white;
-      padding: 24px 18px;
+      padding: var(--space-xl) 18px;
     }
 
     .sidebar h1 {
@@ -67,8 +80,13 @@
 
     .sidebar p {
       color: var(--sidebar-muted);
-      margin: 0 0 24px 0;
+      margin: 0 0 var(--space-lg) 0;
       font-size: 13px;
+    }
+
+    .sidebar nav {
+      display: grid;
+      gap: 6px;
     }
 
     /* Sidebar tab buttons. The active class marks the currently visible tab. */
@@ -79,10 +97,11 @@
       color: #e6eef0;
       text-align: left;
       padding: 12px 14px;
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      margin-bottom: 8px;
+      margin: 0;
       font-weight: 700;
+      min-height: 42px;
     }
 
     .tab-button:hover {
@@ -95,29 +114,81 @@
     }
 
     .main {
-      padding: 40px 44px 72px;
+      padding: 34px 44px 72px;
       height: 100vh;
       overflow: auto;
-      box-sizing: border-box;
+    }
+
+    .app-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+      max-width: 1480px;
+      margin: 0 auto var(--space-lg);
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(248, 251, 251, .94);
+      box-shadow: 0 6px 18px rgba(12,35,64,.05);
+      backdrop-filter: blur(8px);
+    }
+
+    .app-toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+
+    .app-location {
+      color: var(--muted);
+      font-weight: 800;
+      text-align: right;
     }
 
     /* Reusable content containers. */
     .header-card, .panel {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
       box-shadow: 0 6px 20px rgba(12,35,64,.04);
-      margin-bottom: 22px;
+      margin-bottom: var(--space-lg);
     }
 
     .header-card h2 {
-      margin: 0 0 8px 0;
+      margin: 0 0 var(--space-xs) 0;
+      font-size: 28px;
+      line-height: 1.2;
     }
 
     .header-card p {
       margin: 0;
       color: var(--muted);
+      max-width: 1000px;
+    }
+
+    .panel h2,
+    .panel h3,
+    .placeholder h3 {
+      margin: 0 0 var(--space-md);
+      line-height: 1.25;
+    }
+
+    .panel p,
+    .placeholder p {
+      margin: 0 0 var(--space-md);
+      color: var(--muted);
+      max-width: 1080px;
+    }
+
+    .panel > :last-child,
+    .placeholder > :last-child {
+      margin-bottom: 0;
     }
 
     .tab-content {
@@ -131,27 +202,29 @@
     }
 
     #clients.tab-content.active {
-      height: calc(100vh - 112px);
-      max-width: 1680px;
-      overflow: hidden;
+      min-height: calc(100vh - 112px);
+      max-width: 1900px;
+      overflow: visible;
     }
 
     #clients .panel {
-      max-height: calc(100vh - 250px);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      overflow: visible;
     }
 
     /* Drag-and-drop upload box. */
     .drop-zone {
       border: 2px dashed #8bc0c7;
-      border-radius: 14px;
-      padding: 45px;
+      border-radius: var(--radius-md);
+      padding: 52px var(--space-xl);
       text-align: center;
       cursor: pointer;
       background: var(--surface);
-      margin-bottom: 24px;
+      margin-bottom: var(--space-lg);
+    }
+
+    .drop-zone p {
+      margin: var(--space-xs) 0 0;
+      color: var(--muted);
     }
 
     .drop-zone.dragover {
@@ -167,65 +240,91 @@
     label {
       font-weight: bold;
       display: block;
-      margin-top: 14px;
-      margin-bottom: 6px;
+      margin: 0 0 var(--space-xs);
     }
 
     input, select, textarea {
-      padding: 10px;
+      min-height: 42px;
+      padding: 10px 12px;
       border: 1px solid #cbdadb;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       width: 100%;
-      box-sizing: border-box;
       font-family: Arial, sans-serif;
       background: #fffdfb;
       color: var(--text);
+      font-size: 14px;
     }
 
     /* Responsive grid helpers used by multiple tabs. */
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 18px;
+      gap: var(--space-lg);
     }
 
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 18px;
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
     }
 
     /* Overview dashboard stat cards. */
     .stat {
       background: var(--surface-strong);
-      padding: 18px;
-      border-radius: 14px;
+      padding: var(--space-lg);
+      border-radius: var(--radius-md);
       border: 1px solid var(--border);
+      min-height: 108px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .stat strong {
       display: block;
-      font-size: 28px;
-      margin-bottom: 6px;
+      font-size: 30px;
+      line-height: 1.05;
+      margin-bottom: var(--space-xs);
     }
 
     .placeholder {
-      padding: 24px;
+      padding: var(--space-xl);
       border: 1px dashed #8bc0c7;
-      border-radius: 14px;
+      border-radius: var(--radius-md);
       background: var(--surface);
       color: var(--muted);
     }
 
+    textarea + button,
+    select + button,
+    input:not([type="file"]) + button {
+      margin-top: var(--space-md);
+    }
+
     /* Primary and secondary button styles. */
+    button {
+      font: inherit;
+    }
+
+    button.primary,
+    button.secondary {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
     button.primary {
-      padding: 12px 18px;
+      padding: 0 18px;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       background: var(--accent);
       color: white;
       cursor: pointer;
-      margin-top: 18px;
+      margin: 0;
       font-weight: bold;
     }
 
@@ -235,22 +334,85 @@
     }
 
     button.secondary {
-      padding: 8px 10px;
+      padding: 0 14px;
       border: 1px solid #cbdadb;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       background: var(--surface);
       color: var(--text);
       cursor: pointer;
       font-weight: bold;
     }
 
+    button.secondary:disabled {
+      color: #7a8b95;
+      background: #e9f0f0;
+      cursor: not-allowed;
+    }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      margin-top: var(--space-lg);
+      align-items: center;
+    }
+
+    .quick-actions.flush {
+      margin-top: 0;
+    }
+
+    .workflow-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-lg);
+      margin-bottom: var(--space-lg);
+    }
+
+    .workflow-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      min-height: 168px;
+      padding: var(--space-lg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: 0 6px 20px rgba(12,35,64,.035);
+    }
+
+    .workflow-card strong {
+      font-size: 16px;
+    }
+
+    .workflow-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .workflow-card button {
+      align-self: flex-start;
+      margin-top: auto;
+    }
+
+    .inline-link-button {
+      border: none;
+      background: transparent;
+      color: var(--accent);
+      padding: 0;
+      cursor: pointer;
+      font-weight: 800;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
     /* Pagination controls for the client table. */
     .pager {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--space-sm);
       flex-wrap: wrap;
-      margin-top: 16px;
+      margin-top: var(--space-md);
     }
 
     .pager span {
@@ -262,13 +424,13 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 18px;
+      margin-top: var(--space-md);
       font-size: 14px;
     }
 
     th, td {
       border: 1px solid var(--border);
-      padding: 8px;
+      padding: 10px 12px;
       text-align: left;
       vertical-align: top;
     }
@@ -278,42 +440,52 @@
     }
 
     .section {
-      margin-top: 28px;
-      padding-top: 20px;
+      margin-top: var(--space-xl);
+      padding-top: var(--space-lg);
       border-top: 1px solid var(--border);
     }
 
     .message {
-      margin-top: 18px;
-      padding: 14px;
-      border-radius: 8px;
+      margin-top: var(--space-lg);
+      padding: var(--space-md);
+      border-radius: var(--radius-sm);
       background: var(--soft);
       white-space: pre-wrap;
     }
 
-    /* Client list plus side profile panel. */
+    /* Client list plus side profile panel.
+       This area owns its own height so the table and profile card can scroll
+       independently without the browser page cutting off the bottom of either. */
     .client-workspace {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 0;
       gap: 0;
-      align-items: start;
-      margin-top: 18px;
+      align-items: stretch;
+      height: 58vh;
+      min-height: 460px;
+      margin-top: var(--space-xl);
+      margin-bottom: var(--space-xl);
       overflow: hidden;
-      min-height: 0;
       transition: grid-template-columns 220ms ease, gap 220ms ease;
     }
 
     .client-workspace.profile-open {
-      grid-template-columns: minmax(0, 1fr) 420px;
-      gap: 18px;
+      /* Opening a profile gives the right-side card real width and shifts the
+         table left instead of covering it. */
+      grid-template-columns: minmax(0, 1fr) 620px;
+      gap: var(--space-lg);
     }
 
     #clientsTable {
+      /* The table scrolls inside the client workspace, which keeps large
+         databases usable without making the whole page one giant scroll. */
       min-width: 0;
-      max-height: calc(100vh - 450px);
+      min-height: 0;
+      height: 100%;
+      max-height: none;
       overflow: auto;
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       background: var(--surface);
     }
 
@@ -342,20 +514,22 @@
 
     #clientsTable p {
       margin: 0;
-      padding: 16px;
+      padding: var(--space-md);
     }
 
     .profile-side-panel {
-      position: sticky;
-      top: 24px;
-      box-sizing: border-box;
+      /* The profile is a contained scroll panel, not a full-page drawer. */
+      position: relative;
+      top: 0;
       min-width: 0;
-      max-height: calc(100vh - 48px);
+      min-height: 0;
+      height: 100%;
+      max-height: none;
       overflow-y: auto;
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: var(--radius-md);
       background: var(--panel-strong);
-      padding: 18px;
+      padding: var(--space-lg);
       box-shadow: 0 6px 20px rgba(12,35,64,.06);
       opacity: 0;
       visibility: hidden;
@@ -375,9 +549,9 @@
     .profile-header {
       display: flex;
       justify-content: space-between;
-      gap: 18px;
+      gap: var(--space-lg);
       align-items: flex-start;
-      margin-bottom: 18px;
+      margin-bottom: var(--space-lg);
     }
 
     .profile-header h2 {
@@ -392,15 +566,48 @@
     .profile-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 14px;
-      margin-top: 14px;
+      gap: var(--space-md);
+      margin-top: var(--space-md);
+    }
+
+    .profile-tabs {
+      display: flex;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: var(--space-sm);
+    }
+
+    .profile-tab-button {
+      min-height: 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      padding: 0 12px;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .profile-tab-button.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .profile-tab-panel {
+      display: none;
+    }
+
+    .profile-tab-panel.active {
+      display: block;
     }
 
     .profile-card {
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       background: #fffdfb;
-      padding: 16px;
+      padding: var(--space-md);
       min-height: 92px;
     }
 
@@ -416,7 +623,7 @@
     }
 
     .profile-card h3 {
-      margin: 0 0 10px 0;
+      margin: 0 0 var(--space-sm) 0;
       font-size: 13px;
       color: var(--muted);
       text-transform: uppercase;
@@ -427,7 +634,7 @@
       font-size: 28px;
       line-height: 1.15;
       font-weight: 800;
-      margin-bottom: 10px;
+      margin-bottom: var(--space-sm);
     }
 
     .profile-card .metric-value {
@@ -438,8 +645,8 @@
     .chip-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
+      gap: var(--space-sm);
+      margin-top: var(--space-sm);
     }
 
     .chip {
@@ -448,23 +655,23 @@
       border: 1px solid #cbdadb;
       background: var(--surface);
       border-radius: 999px;
-      padding: 6px 9px;
+      padding: 6px 10px;
       font-size: 13px;
       font-weight: 700;
     }
 
     .detail-list {
       display: grid;
-      gap: 8px;
-      margin-top: 8px;
+      gap: var(--space-sm);
+      margin-top: var(--space-sm);
     }
 
     .detail-row {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
+      gap: var(--space-md);
       border-bottom: 1px solid var(--border);
-      padding-bottom: 8px;
+      padding-bottom: var(--space-sm);
     }
 
     .detail-row:last-child {
@@ -488,17 +695,195 @@
     }
 
     .banner {
-      padding: 12px;
-      border-radius: 8px;
+      padding: var(--space-md);
+      border-radius: var(--radius-sm);
       background: var(--warning);
       border: 1px solid var(--warning-border);
-      margin-top: 14px;
+      margin-top: var(--space-md);
+    }
+
+    .danger-panel {
+      border-color: #e7b4b4;
+      background: #fff8f8;
+    }
+
+    .danger-panel h3 {
+      color: #7f1d1d;
+    }
+
+    button.danger {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: #9f2d2d;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button.danger:disabled {
+      background: #c9a6a6;
+      cursor: not-allowed;
+    }
+
+    .admin-client-list {
+      max-height: 360px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      margin-top: var(--space-md);
+    }
+
+    .checkbox-cell {
+      width: 44px;
+      text-align: center;
+    }
+
+    .checkbox-cell input {
+      width: auto;
+      min-height: auto;
+    }
+
+    .danger-slider {
+      display: grid;
+      gap: var(--space-sm);
+      max-width: 560px;
+      margin-top: var(--space-md);
+    }
+
+    .danger-slider input[type="range"] {
+      width: 100%;
+      accent-color: #9f2d2d;
+    }
+
+    .review-compare {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(180px, 1fr));
+      gap: var(--space-sm);
+    }
+
+    .review-compare > div {
+      display: grid;
+      gap: 4px;
+      padding: var(--space-sm);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+
+    .review-compare strong {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .review-compare span {
+      font-weight: 800;
+    }
+
+    .review-compare small {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .review-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      min-width: 220px;
+    }
+
+    .review-help {
+      padding: var(--space-md);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--soft);
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .bulk-select-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: 0;
+      cursor: pointer;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .bulk-select-label input {
+      width: auto;
+      min-height: auto;
+    }
+
+    .recommendation-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border: 1px solid #cbdadb;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .embedded-review-panel {
+      margin-top: var(--space-xl);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--panel-strong);
+      overflow: hidden;
+    }
+
+    .embedded-review-panel summary {
+      cursor: pointer;
+      padding: var(--space-md) var(--space-lg);
+      font-weight: 900;
+      background: var(--surface-strong);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .embedded-review-panel[open] summary {
+      border-bottom-color: var(--border);
+    }
+
+    .embedded-review-body {
+      padding: var(--space-lg);
+    }
+
+    #reviewsTable {
+      max-height: 62vh;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      margin-top: var(--space-lg);
+    }
+
+    #reviewsTable table {
+      min-width: 1200px;
+      margin-top: 0;
     }
 
     /* Mobile layout: collapse side-by-side grids into a single column. */
     @media (max-width: 900px) {
       .app-shell { grid-template-columns: 1fr; }
-      .grid, .grid-3 { grid-template-columns: 1fr; }
+      .grid, .grid-3, .workflow-grid { grid-template-columns: 1fr; }
+      .app-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+        margin-top: 0;
+      }
+      .app-location {
+        text-align: left;
+      }
       .client-workspace,
       .client-workspace.profile-open {
         grid-template-columns: 1fr;
@@ -530,31 +915,68 @@
       <h1>NSV Client Data Platform</h1>
       <p>Phase 1 prototype</p>
 
-      <button class="tab-button active" data-tab="overview">Overview</button>
-      <button class="tab-button" data-tab="upload">Upload Data</button>
-      <button class="tab-button" data-tab="visualizations">Tableau Visualizations</button>
-      <button class="tab-button" data-tab="ai">AI Insights</button>
-      <button class="tab-button" data-tab="clients">Client Master Records</button>
-      <button class="tab-button" data-tab="reviews">Review Queue</button>
-      <button class="tab-button" data-tab="sources">Data Sources</button>
-      <button class="tab-button" data-tab="settings">Admin / Settings</button>
+      <nav aria-label="Main sections">
+        <button class="tab-button active" data-tab="overview">Overview</button>
+        <button class="tab-button" data-tab="upload">Upload Data</button>
+        <button class="tab-button" data-tab="visualizations">Tableau Visualizations</button>
+        <button class="tab-button" data-tab="ai">AI Insights</button>
+        <button class="tab-button" data-tab="clients">Client Master Records</button>
+        <button class="tab-button" data-tab="sources">Data Sources</button>
+        <button class="tab-button" data-tab="settings">Admin / Settings</button>
+      </nav>
     </aside>
 
     <main class="main">
+      <div class="app-toolbar">
+        <div class="app-toolbar-actions">
+          <button class="secondary" id="appBackButton" onclick="goBackInApp()" disabled>Back</button>
+          <button class="secondary" onclick="navigateToTab('overview')">Overview</button>
+        </div>
+        <div class="app-location" id="appLocation">Overview</div>
+      </div>
+
       <!-- Overview tab: high-level project status, dashboard counts, and metrics upload. -->
       <section id="overview" class="tab-content active">
         <div class="header-card">
           <h2>Overview</h2>
           <p>Centralize client data and program metrics from JotForm, HMIS, HTH, eCW, and planning sheets into one analytics-ready system.</p>
           <div class="banner"><strong>Current status:</strong> Upload/import prototype with client matching, metrics sheet storage, and placeholder tabs for future Tableau dashboards, AI insights, client search, and admin workflows.</div>
+          <div class="quick-actions">
+            <button class="primary" onclick="navigateToTab('upload')">Upload Client Data</button>
+            <button class="secondary" onclick="navigateToTab('clients')">Search Client Records</button>
+            <button class="secondary" onclick="openReviewQueue()">Open Review Queue</button>
+          </div>
         </div>
 
         <div class="grid-3">
-          <div class="stat"><strong id="statClients">—</strong>Clients</div>
-          <div class="stat"><strong id="statPrograms">—</strong>Programs</div>
-          <div class="stat"><strong id="statImports">—</strong>Imports</div>
-          <div class="stat"><strong id="statReviews">—</strong>Needs Review</div>
-          <div class="stat"><strong id="statMetrics">—</strong>Metrics</div>
+          <div class="stat"><strong id="statClients">&mdash;</strong>Clients</div>
+          <div class="stat"><strong id="statPrograms">&mdash;</strong>Programs</div>
+          <div class="stat"><strong id="statImports">&mdash;</strong>Imports</div>
+          <div class="stat"><strong id="statReviews">&mdash;</strong>Needs Review</div>
+          <div class="stat"><strong id="statMetrics">&mdash;</strong>Metrics</div>
+        </div>
+
+        <div class="workflow-grid">
+          <div class="workflow-card">
+            <strong>1. Import</strong>
+            <p>Bring in client exports from HTH, HMIS, JotForm, or eCW.</p>
+            <button class="secondary" onclick="navigateToTab('upload')">Go to Upload</button>
+          </div>
+          <div class="workflow-card">
+            <strong>2. Review</strong>
+            <p>Check records that could not be confidently matched automatically.</p>
+            <button class="secondary" onclick="openReviewQueue()">Go to Review</button>
+          </div>
+          <div class="workflow-card">
+            <strong>3. Search</strong>
+            <p>Find a client and open the slide-in profile without leaving the table.</p>
+            <button class="secondary" onclick="navigateToTab('clients')">Go to Clients</button>
+          </div>
+          <div class="workflow-card">
+            <strong>4. Report</strong>
+            <p>Store planning metrics and prepare cleaned data for Tableau.</p>
+            <button class="secondary" onclick="openMetricsPicker()">Upload Metrics</button>
+          </div>
         </div>
 
         <div class="panel">
@@ -572,7 +994,9 @@
           <h3>Program Metrics / Planning Sheets</h3>
           <p>Store non-client metrics sheets such as H&W/FY planning files for overview reporting without adding them to client master records.</p>
           <input id="metricsFileInput" type="file" accept=".csv,.xlsx,.xls" />
-          <button class="primary" onclick="document.getElementById('metricsFileInput').click()">Upload Metrics Sheet</button>
+          <div class="quick-actions">
+            <button class="primary" onclick="openMetricsPicker()">Upload Metrics Sheet</button>
+          </div>
           <div id="metricsMessage" class="message" style="display:none;"></div>
           <div id="metricsSummary"></div>
         </div>
@@ -625,6 +1049,10 @@
             <p>Map spreadsheet columns to system fields. First name, last name or full name, and DOB are required.</p>
             <div id="mappingForm"></div>
             <button class="primary" id="importButton">Import Data</button>
+            <div class="quick-actions">
+              <button class="secondary" onclick="navigateToTab('clients')">Search Imported Clients</button>
+              <button class="secondary" onclick="openReviewQueue()">Check Review Queue</button>
+            </div>
           </div>
 
           <div id="message" class="message" style="display:none;"></div>
@@ -636,6 +1064,10 @@
         <div class="header-card">
           <h2>Tableau Visualizations</h2>
           <p>Placeholder area for embedded Tableau dashboards once the database is connected to Tableau.</p>
+          <div class="quick-actions">
+            <button class="secondary" onclick="goBackInApp()">Back</button>
+            <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
+          </div>
         </div>
 
         <div class="grid">
@@ -655,6 +1087,10 @@
         <div class="header-card">
           <h2>AI Insights</h2>
           <p>Placeholder area for future AI-assisted analytics after the SQL database and reporting layer are stable.</p>
+          <div class="quick-actions">
+            <button class="secondary" onclick="goBackInApp()">Back</button>
+            <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
+          </div>
         </div>
 
         <div class="panel">
@@ -670,6 +1106,10 @@
         <div class="header-card">
           <h2>Client Master Records</h2>
           <p>Search and review NSV Client IDs created from imported records.</p>
+          <div class="quick-actions">
+            <button class="secondary" onclick="navigateToTab('upload')">Import More Data</button>
+            <button class="secondary" onclick="openReviewQueue()">Review Unmatched Records</button>
+          </div>
         </div>
 
         <div class="panel">
@@ -684,6 +1124,8 @@
                 <option value="25">25</option>
                 <option value="50" selected>50</option>
                 <option value="100">100</option>
+                <option value="250">250</option>
+                <option value="500">500</option>
               </select>
             </div>
           </div>
@@ -694,24 +1136,42 @@
             <span id="clientPageStatus">Page 0 of 0</span>
             <button class="secondary" id="nextClientsButton" onclick="nextClientPage()">Next</button>
           </div>
+
           <div id="clientWorkspace" class="client-workspace">
             <div id="clientsTable"></div>
             <aside id="clientProfile" class="profile-side-panel" aria-hidden="true"></aside>
           </div>
-        </div>
-      </section>
 
-
-      <!-- Review tab: records that need manual matching decisions. -->
-      <section id="reviews" class="tab-content">
-        <div class="header-card">
-          <h2>Review Queue</h2>
-          <p>Records that could not be safely matched automatically, such as name-only JotForm sign-ins or missing DOB rows.</p>
-        </div>
-
-        <div class="panel">
-          <button class="primary" onclick="loadReviews()">Refresh Review Queue</button>
-          <div id="reviewsTable"></div>
+          <details id="reviewQueueDisclosure" class="embedded-review-panel">
+            <summary>Review Queue</summary>
+            <div class="embedded-review-body">
+              <p>Resolve records that could not be safely matched automatically. Use the comparison cards to verify whether the imported row and possible profile are the same person.</p>
+              <div class="review-help">
+                Check rows only when you want to apply their recommended action in bulk. For one row at a time, use the buttons in that row.
+              </div>
+              <div class="quick-actions flush">
+                <button class="primary" onclick="loadReviews()">Refresh Review Queue</button>
+                <button class="secondary" onclick="selectVisibleReviewRows()">Select visible recommendations</button>
+                <button class="secondary" onclick="clearReviewSelection()">Clear selection</button>
+                <button class="secondary" id="applySelectedReviewsButton" onclick="applySelectedReviewRecommendations()" disabled title="Check one or more rows first.">Apply recommendations to checked rows</button>
+                <span id="reviewSelectedCount">0 checked for bulk action</span>
+                <label style="margin:0; width:auto;">
+                  Page size
+                  <select id="reviewPageSize" onchange="loadReviews(1)" style="width:120px;">
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="250">250</option>
+                    <option value="500">500</option>
+                  </select>
+                </label>
+                <button class="secondary" id="prevReviewsButton" onclick="changeReviewPage(-1)">Previous</button>
+                <span id="reviewPageStatus">Page 1</span>
+                <button class="secondary" id="nextReviewsButton" onclick="changeReviewPage(1)">Next</button>
+              </div>
+              <div id="reviewMessage" class="message" style="display:none;"></div>
+              <div id="reviewsTable"></div>
+            </div>
+          </details>
         </div>
       </section>
 
@@ -720,6 +1180,11 @@
         <div class="header-card">
           <h2>Data Sources</h2>
           <p>Current CSV/report sources that feed the NSV data warehouse.</p>
+          <div class="quick-actions">
+            <button class="secondary" onclick="goBackInApp()">Back</button>
+            <button class="secondary" onclick="navigateToTab('upload')">Upload from a Source</button>
+            <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
+          </div>
         </div>
 
         <div class="panel">
@@ -752,7 +1217,11 @@
       <section id="settings" class="tab-content">
         <div class="header-card">
           <h2>Admin / Settings</h2>
-          <p>Placeholder for future configuration, permissions, audit logs, and import rules.</p>
+          <p>Manage local demo data, import rules, and cleanup workflows.</p>
+          <div class="quick-actions">
+            <button class="secondary" onclick="goBackInApp()">Back</button>
+            <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
+          </div>
         </div>
 
         <div class="grid">
@@ -765,6 +1234,56 @@
             <p>Future settings for login, user roles, access permissions, audit logs, and session timeout.</p>
           </div>
         </div>
+
+        <div class="panel danger-panel">
+          <h3>Delete Specific Client Profiles</h3>
+          <p>Select one or more client profiles to remove from the local database. This also removes each selected client's source rows, source details, and enrollments.</p>
+          <div class="grid">
+            <div>
+              <label for="adminClientSearch">Search clients to delete</label>
+              <input id="adminClientSearch" placeholder="Search by name, DOB, HMIS ID, eCW ID, or NSV ID" />
+            </div>
+            <div>
+              <label for="adminClientPageSize">Rows to show</label>
+              <select id="adminClientPageSize" onchange="loadAdminClients()">
+                <option value="25">25</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+          <div class="quick-actions">
+            <button class="secondary" onclick="loadAdminClients()">Search</button>
+            <button class="secondary" onclick="clearAdminClientSelection()">Clear Selection</button>
+            <span id="adminSelectedCount">0 selected</span>
+          </div>
+          <div id="adminClientList" class="admin-client-list"><p>Search for clients to select profiles for deletion.</p></div>
+
+          <div id="bulkDeleteSafety" class="danger-slider" style="display:none;">
+            <label for="bulkDeleteSlider">Deleting 10 or more profiles requires sliding this all the way right.</label>
+            <input id="bulkDeleteSlider" type="range" min="0" max="100" value="0" oninput="updateAdminDeleteButtons()" />
+            <span id="bulkDeleteSliderStatus">Bulk delete safety not unlocked.</span>
+          </div>
+
+          <div class="quick-actions">
+            <button class="danger" id="deleteSelectedClientsButton" onclick="deleteSelectedClients()" disabled>Delete Selected Profiles</button>
+          </div>
+          <div id="adminClientMessage" class="message" style="display:none;"></div>
+        </div>
+
+        <div class="panel danger-panel">
+          <h3>Clear Entire Local Database</h3>
+          <p>This deletes all local demo/import data: clients, programs, enrollments, source details, review queue rows, import logs, and metrics. Use this only when you want a completely clean slate.</p>
+          <div class="danger-slider">
+            <label for="clearDatabaseSlider">Slide all the way right to unlock full database reset.</label>
+            <input id="clearDatabaseSlider" type="range" min="0" max="100" value="0" oninput="updateAdminDeleteButtons()" />
+            <span id="clearDatabaseSliderStatus">Full reset is locked.</span>
+          </div>
+          <div class="quick-actions">
+            <button class="danger" id="clearDatabaseButton" onclick="clearEntireDatabase()" disabled>Clear Entire Database</button>
+          </div>
+          <div id="clearDatabaseMessage" class="message" style="display:none;"></div>
+        </div>
       </section>
     </main>
   </div>
@@ -774,6 +1293,8 @@
      This section controls page behavior and communicates with FastAPI endpoints.
      ========================= -->
 <script>
+  // --- Configuration and shared state ---
+
   // Maps each source system to the programs that should appear in the Program dropdown.
   const programOptions = {
     "eCW": ["Behavioral Health Services"],
@@ -792,9 +1313,94 @@
     "HMIS/HTH": ["Erna's House"]
   };
 
+  const tabLabels = {
+    overview: "Overview",
+    upload: "Upload Data",
+    visualizations: "Tableau Visualizations",
+    ai: "AI Insights",
+    clients: "Client Master Records",
+    sources: "Data Sources",
+    settings: "Admin / Settings"
+  };
+
+  let activeTabName = "overview";
+  const appNavigationHistory = [];
+  const $ = (id) => document.getElementById(id);
+
+  const dom = {
+    toolbar: {
+      backButton: $("appBackButton"),
+      location: $("appLocation")
+    },
+    stats: {
+      clients: $("statClients"),
+      programs: $("statPrograms"),
+      imports: $("statImports"),
+      reviews: $("statReviews"),
+      metrics: $("statMetrics")
+    },
+    metrics: {
+      fileInput: $("metricsFileInput"),
+      message: $("metricsMessage"),
+      summary: $("metricsSummary")
+    },
+    clients: {
+      search: $("clientSearch"),
+      pageSize: $("clientPageSize"),
+      pageStatus: $("clientPageStatus"),
+      prevButton: $("prevClientsButton"),
+      nextButton: $("nextClientsButton"),
+      table: $("clientsTable"),
+      profile: $("clientProfile"),
+      workspace: $("clientWorkspace"),
+      reviewDisclosure: $("reviewQueueDisclosure")
+    },
+    upload: {
+      dropZone: $("dropZone"),
+      fileInput: $("fileInput"),
+      previewSection: $("previewSection"),
+      mappingSection: $("mappingSection"),
+      fileInfo: $("fileInfo"),
+      previewTable: $("previewTable"),
+      mappingForm: $("mappingForm"),
+      importButton: $("importButton"),
+      message: $("message"),
+      programName: $("programName"),
+      sourceSystem: $("sourceSystem")
+    },
+    reviews: {
+      table: $("reviewsTable"),
+      pageSize: $("reviewPageSize"),
+      pageStatus: $("reviewPageStatus"),
+      prevButton: $("prevReviewsButton"),
+      nextButton: $("nextReviewsButton"),
+      selectedCount: $("reviewSelectedCount"),
+      applySelectedButton: $("applySelectedReviewsButton"),
+      message: $("reviewMessage")
+    }
+  };
+
+  dom.admin = {
+    search: $("adminClientSearch"),
+    pageSize: $("adminClientPageSize"),
+    clientList: $("adminClientList"),
+    selectedCount: $("adminSelectedCount"),
+    bulkDeleteSafety: $("bulkDeleteSafety"),
+    bulkDeleteSlider: $("bulkDeleteSlider"),
+    bulkDeleteSliderStatus: $("bulkDeleteSliderStatus"),
+    deleteSelectedButton: $("deleteSelectedClientsButton"),
+    clientMessage: $("adminClientMessage"),
+    clearDatabaseSlider: $("clearDatabaseSlider"),
+    clearDatabaseSliderStatus: $("clearDatabaseSliderStatus"),
+    clearDatabaseButton: $("clearDatabaseButton"),
+    clearDatabaseMessage: $("clearDatabaseMessage")
+  };
+
+  // --- Page setup and navigation ---
+
   // Rebuilds the Program dropdown whenever the user changes Source System.
   function populatePrograms(source) {
-    const programSelect = document.getElementById("programName");
+    const programSelect = dom.upload.programName;
     programSelect.innerHTML = "";
 
     // The first option is instructional text, not a real program value.
@@ -819,65 +1425,124 @@
     populatePrograms("");
 
     // Keep Program Name choices in sync with Source System.
-    const sourceSelect = document.getElementById("sourceSystem");
-    sourceSelect.addEventListener("change", function () {
+    dom.upload.sourceSystem.addEventListener("change", function () {
       populatePrograms(this.value);
     });
 
     // Load initial dashboard data for the Overview tab.
+    updateAppNavigation();
     loadStats();
     loadMetricsSummary();
 
     // Watch the metrics file input and upload a selected metrics sheet.
-    document.getElementById("metricsFileInput").addEventListener("change", (event) => {
+    dom.metrics.fileInput.addEventListener("change", (event) => {
       const file = event.target.files[0];
       if (file) uploadMetricsFile(file);
     });
+
+    // When the embedded Review Queue is opened directly, load the latest page.
+    dom.clients.reviewDisclosure.addEventListener("toggle", () => {
+      if (dom.clients.reviewDisclosure.open) loadReviews(1);
+    });
+
+    // Review action buttons are generated dynamically, so one delegated click
+    // handler keeps all row actions clickable after every table refresh.
+    dom.reviews.table.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-review-action]");
+      if (!button) return;
+      applyReviewAction(
+        Number(button.dataset.reviewId),
+        button.dataset.reviewAction,
+        button.dataset.targetId || ""
+      );
+    });
   });
+
+  // Switches to a tab from either the sidebar, toolbar, or an in-page workflow button.
+  function navigateToTab(tabName, options = {}) {
+    if (tabName === "reviews") {
+      openReviewQueue();
+      return;
+    }
+
+    const targetSection = $(tabName);
+    if (!targetSection) return;
+
+    const shouldRecordHistory = options.recordHistory !== false;
+    if (shouldRecordHistory && activeTabName && activeTabName !== tabName) {
+      appNavigationHistory.push(activeTabName);
+    }
+
+    // Hide every tab and remove every active button state.
+    document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(section => section.classList.remove("active"));
+
+    // Show the tab whose id matches this button's data-tab value.
+    const activeButton = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
+    if (activeButton) activeButton.classList.add("active");
+    targetSection.classList.add("active");
+    activeTabName = tabName;
+    updateAppNavigation();
+
+    // Keep each tab fresh when the user arrives from any route.
+    if (tabName === "overview") {
+      loadStats();
+      loadMetricsSummary();
+    }
+    if (tabName === "clients") loadClients();
+    if (tabName === "settings") loadAdminClients();
+  }
+
+  // Opens the embedded Review Queue inside Client Master Records.
+  function openReviewQueue() {
+    navigateToTab("clients");
+    if (dom.clients.reviewDisclosure) dom.clients.reviewDisclosure.open = true;
+    loadReviews(1);
+    setTimeout(() => dom.clients.reviewDisclosure?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
 
   // Handles clicks on the sidebar tabs.
   document.querySelectorAll(".tab-button").forEach(button => {
-    button.addEventListener("click", () => {
-      // Hide every tab and remove every active button state.
-      document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
-      document.querySelectorAll(".tab-content").forEach(section => section.classList.remove("active"));
-
-      // Show the tab whose id matches this button's data-tab value.
-      button.classList.add("active");
-      document.getElementById(button.dataset.tab).classList.add("active");
-
-      // Refresh backend-loaded tabs when the user opens them.
-      if (button.dataset.tab === "overview") {
-        loadStats();
-        loadMetricsSummary();
-      }
-      if (button.dataset.tab === "clients") loadClients();
-      if (button.dataset.tab === "reviews") loadReviews();
-    });
+    button.addEventListener("click", () => navigateToTab(button.dataset.tab));
   });
+
+  // Moves backward through the app's own section history.
+  function goBackInApp() {
+    const previousTab = appNavigationHistory.pop();
+    if (!previousTab) return;
+    navigateToTab(previousTab, { recordHistory: false });
+  }
+
+  // Keeps the toolbar label and Back button in sync with the active tab.
+  function updateAppNavigation() {
+    if (dom.toolbar.backButton) dom.toolbar.backButton.disabled = appNavigationHistory.length === 0;
+    if (dom.toolbar.location) dom.toolbar.location.textContent = tabLabels[activeTabName] || "Overview";
+  }
+
+  // --- Overview and metrics ---
 
   // Loads the Overview stat cards from the backend /stats endpoint.
   async function loadStats() {
     try {
       const response = await fetch("/stats");
       const stats = await response.json();
-      document.getElementById("statClients").textContent = stats.clients ?? "0";
-      document.getElementById("statPrograms").textContent = stats.programs ?? "0";
-      document.getElementById("statImports").textContent = stats.imports ?? "0";
-      document.getElementById("statReviews").textContent = stats.reviews ?? "0";
-      document.getElementById("statMetrics").textContent = stats.metrics ?? "0";
+      dom.stats.clients.textContent = stats.clients ?? "0";
+      dom.stats.programs.textContent = stats.programs ?? "0";
+      dom.stats.imports.textContent = stats.imports ?? "0";
+      dom.stats.reviews.textContent = stats.reviews ?? "0";
+      dom.stats.metrics.textContent = stats.metrics ?? "0";
     } catch {
-      document.getElementById("statClients").textContent = "—";
-      document.getElementById("statPrograms").textContent = "—";
-      document.getElementById("statImports").textContent = "—";
-      document.getElementById("statReviews").textContent = "—";
-      document.getElementById("statMetrics").textContent = "—";
+      dom.stats.clients.textContent = "-";
+      dom.stats.programs.textContent = "-";
+      dom.stats.imports.textContent = "-";
+      dom.stats.reviews.textContent = "-";
+      dom.stats.metrics.textContent = "-";
     }
   }
 
   // Loads the metrics/planning sheet summary shown on the Overview tab.
   async function loadMetricsSummary() {
-    const summary = document.getElementById("metricsSummary");
+    const summary = dom.metrics.summary;
     summary.innerHTML = "<p>Loading metrics summary...</p>";
 
     try {
@@ -911,9 +1576,14 @@
     }
   }
 
+  // Opens the hidden metrics file picker from any metrics button.
+  function openMetricsPicker() {
+    dom.metrics.fileInput.click();
+  }
+
   // Uploads and imports a program metrics/planning sheet from the Overview tab.
   async function uploadMetricsFile(file) {
-    const metricsMessage = document.getElementById("metricsMessage");
+    const metricsMessage = dom.metrics.message;
     metricsMessage.style.display = "block";
     metricsMessage.textContent = "Uploading metrics sheet...";
 
@@ -957,13 +1627,20 @@
       return;
     }
 
-    metricsMessage.textContent =
-      `Metrics import complete.\n\nRows processed: ${result.rows_processed}\nRows imported: ${result.rows_imported}`;
+    metricsMessage.innerHTML = `
+      <div>${escapeHtml(`Metrics import complete.\n\nRows processed: ${result.rows_processed}\nRows imported: ${result.rows_imported}`)}</div>
+      <div class="quick-actions">
+        <button class="secondary" onclick="loadMetricsSummary()">Refresh Metrics Summary</button>
+        <button class="secondary" onclick="navigateToTab('visualizations')">View Reporting Placeholder</button>
+      </div>
+    `;
 
     // Refresh overview data after a successful metrics import.
     loadStats();
     loadMetricsSummary();
   }
+
+  // --- Client search ---
 
   // Client search pagination state.
   let clientPage = 1;
@@ -971,7 +1648,7 @@
 
   // Reads the selected number of rows per page for client search.
   function getClientPageSize() {
-    return Number(document.getElementById("clientPageSize").value || 50);
+    return Number(dom.clients.pageSize.value || 50);
   }
 
   // Starts a fresh client search from page 1.
@@ -1008,17 +1685,15 @@
     const start = total ? ((clientPage - 1) * pageSize) + 1 : 0;
     const end = Math.min(clientPage * pageSize, total);
 
-    document.getElementById("clientPageStatus").textContent =
+    dom.clients.pageStatus.textContent =
       total ? `Showing ${start}-${end} of ${total} clients (page ${clientPage} of ${clientTotalPages})` : "No clients found";
-    document.getElementById("prevClientsButton").disabled = clientPage <= 1;
-    document.getElementById("nextClientsButton").disabled = clientPage >= clientTotalPages;
+    dom.clients.prevButton.disabled = clientPage <= 1;
+    dom.clients.nextButton.disabled = clientPage >= clientTotalPages;
   }
 
   // Fetches client search results from the backend and renders the table.
   async function loadClients(page = clientPage) {
-    const table = document.getElementById("clientsTable");
-    const profile = document.getElementById("clientProfile");
-    const workspace = document.getElementById("clientWorkspace");
+    const { table, profile, workspace } = dom.clients;
     table.innerHTML = "<p>Loading clients...</p>";
     workspace.classList.remove("profile-open");
     profile.setAttribute("aria-hidden", "true");
@@ -1030,7 +1705,7 @@
       });
 
       // Include the search term only when the user typed one.
-      const search = document.getElementById("clientSearch").value.trim();
+      const search = dom.clients.search.value.trim();
       if (search) params.set("search", search);
 
       const response = await fetch(`/clients?${params.toString()}`);
@@ -1051,24 +1726,104 @@
         return;
       }
 
-      // Build one table row per client. The View button opens the profile panel.
-      let html = "<table><thead><tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th><th>Profile</th></tr></thead><tbody>";
-      clients.forEach(c => {
-        html += `<tr><td>${escapeHtml(c.nsv_client_id ?? "N/A")}</td><td>${escapeHtml(c.first_name ?? "N/A")}</td><td>${escapeHtml(c.last_name ?? "N/A")}</td><td>${escapeHtml(c.date_of_birth ?? "N/A")}</td><td>${escapeHtml(c.hmis_id ?? "N/A")}</td><td>${escapeHtml(c.ecw_id ?? "N/A")}</td><td><button class="secondary" onclick="viewClientProfile('${escapeHtml(c.nsv_client_id)}')">View</button></td></tr>`;
-      });
-      html += "</tbody></table>";
-      table.innerHTML = html;
+      table.innerHTML = renderClientTable(clients);
     } catch {
       table.innerHTML = "<p>Unable to load clients. Make sure the FastAPI backend and database are running.</p>";
     }
   }
 
+  // Builds one table row per client. The View button opens the profile panel.
+  function renderClientTable(clients) {
+    const rows = clients.map(client => `
+      <tr>
+        <td>${escapeHtml(client.nsv_client_id ?? "N/A")}</td>
+        <td>${escapeHtml(client.first_name ?? "N/A")}</td>
+        <td>${escapeHtml(client.last_name ?? "N/A")}</td>
+        <td>${escapeHtml(client.date_of_birth ?? "N/A")}</td>
+        <td>${escapeHtml(client.hmis_id ?? "N/A")}</td>
+        <td>${escapeHtml(client.ecw_id ?? "N/A")}</td>
+        <td><button class="secondary" onclick="viewClientProfile('${escapeHtml(client.nsv_client_id)}')">View</button></td>
+      </tr>
+    `).join("");
+
+    return `
+      <table>
+        <thead>
+          <tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th><th>Profile</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
   // Pressing Enter in the client search box runs the search.
-  document.getElementById("clientSearch").addEventListener("keydown", event => {
+  dom.clients.search.addEventListener("keydown", event => {
     if (event.key === "Enter") {
       searchClients();
     }
   });
+
+  // --- Client profile helpers ---
+
+  // SourceDetail rows are flexible key/value records from different import formats.
+  // This list controls which of those fields are shown in the profile's
+  // Additional Info tab, without crowding the main profile summary.
+  const additionalInfoFields = [
+    { field: "identity_enrichment_status", label: "Identity Enrichment" },
+    { field: "jotform_client_status", label: "JotForm Status" },
+    { field: "date_of_intake", label: "Date Of Intake" },
+    { field: "dc_resident", label: "DC Resident" },
+    { field: "nsv_resident", label: "NSV Resident" },
+    { field: "nsv_program", label: "NSV Program From Form" },
+    { field: "snap_status", label: "SNAP" },
+    { field: "snap_work_requirements_letter", label: "SNAP Work Requirements Letter" },
+    { field: "benefits_staff_interest", label: "Benefits Staff Interest" },
+    { field: "future_service_interest", label: "Future Service Interest" },
+    { field: "has_photo_id", label: "Photo ID" },
+    { field: "photo_id_state_issuer", label: "Photo ID State/Issuer" },
+    { field: "primary_language", label: "Primary Language" },
+    { field: "patient_language", label: "Patient Language" },
+    { field: "current_housing", label: "Current Housing" },
+    { field: "current_stay_location", label: "Current Stay Location" },
+    { field: "current_housing_duration", label: "Current Housing Duration" },
+    { field: "reasons_for_unhoused", label: "Reasons For Being Unhoused" },
+    { field: "linked_service_agency", label: "Linked Service Agency" },
+    { field: "military_veteran", label: "Military Veteran" },
+    { field: "primary_race", label: "Primary Race" },
+    { field: "secondary_race", label: "Secondary Race" },
+    { field: "pronouns", label: "Pronouns" },
+    { field: "additional_pronouns", label: "Additional Pronouns" },
+    { field: "staff_completing_form", label: "Staff Completing Form" },
+    { field: "encounter_id", label: "Encounter ID" },
+    { field: "visit_type", label: "Visit Type" },
+    { field: "visit_sub_type", label: "Visit Sub-Type" },
+    { field: "visit_status", label: "Visit Status" },
+    { field: "visit_reason", label: "Visit Reason" },
+    { field: "patient_status", label: "Patient Status" },
+    { field: "department_name", label: "Department" },
+    { field: "practice_name", label: "Practice" },
+    { field: "appointment_facility_name", label: "Appointment Facility" },
+    { field: "appointment_provider_name", label: "Appointment Provider" },
+    { field: "resource_provider_name", label: "Resource Provider" },
+    { field: "appointment_insurance_name", label: "Appointment Insurance" },
+    { field: "primary_insurance_name", label: "Primary Insurance" },
+    { field: "referral_source", label: "Referral Source" },
+    { field: "provider_name", label: "Provider Name" },
+    { field: "full_provider_name", label: "Full Provider Name" },
+    { field: "funding_source", label: "Funding Source" },
+    { field: "current_lease_up_unit_address", label: "Lease-Up Address" },
+    { field: "current_lease_up_date", label: "Lease-Up Date" },
+    { field: "date_placed_in_psh", label: "Date Placed In PSH" },
+    { field: "date_of_match_to_program", label: "Date Matched To Program" },
+    { field: "type_of_voucher", label: "Voucher Type" },
+    { field: "unit_availability", label: "Unit Availability" },
+    { field: "move_type", label: "Move Type" },
+    { field: "dcha_application_status", label: "DCHA Application Status" },
+    { field: "housed", label: "Housed" },
+    { field: "exited", label: "Exited" },
+    { field: "reason_for_exit", label: "Reason For Exit" },
+    { field: "other_services_requested", label: "Other Services Requested" }
+  ];
 
   // Counts rows by a calculated key, such as program name or source system.
   function countBy(items, keyFn) {
@@ -1079,6 +1834,62 @@
       counts.set(key, (counts.get(key) || 0) + 1);
     });
     return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }
+
+  const knownServiceLabels = [
+    "Employment Support",
+    "Behavioral Health",
+    "Case Management",
+    "Housing Support",
+    "Legal Services",
+    "Transportation",
+    "Benefits",
+    "Clothing",
+    "Laundry",
+    "Showers",
+    "Shower",
+    "Meals",
+    "Mail",
+    "Other"
+  ];
+
+  // Splits combined service text from source forms into readable service chips.
+  function splitServiceValue(value) {
+    const cleaned = String(value || "").replace(/\s+/g, " ").trim();
+    if (!cleaned || /^n\/?a$/i.test(cleaned) || /^none$/i.test(cleaned) || /^no$/i.test(cleaned)) {
+      return [];
+    }
+
+    const pieces = cleaned
+      .split(/\s*(?:,|;|\||\/|\+|\band\b)\s*/i)
+      .map(piece => piece.trim())
+      .filter(Boolean);
+
+    return pieces.flatMap(piece => {
+      const lowerPiece = piece.toLowerCase();
+      const matches = knownServiceLabels
+        .map(label => ({ label: label === "Showers" ? "Shower" : label, index: lowerPiece.indexOf(label.toLowerCase()) }))
+        .filter(match => match.index >= 0)
+        .sort((a, b) => a.index - b.index || b.label.length - a.label.length);
+
+      if (!matches.length) return [piece];
+
+      const services = [];
+      const seen = new Set();
+      matches.forEach(match => {
+        if (seen.has(match.label)) return;
+        seen.add(match.label);
+        services.push(match.label);
+      });
+      return services;
+    });
+  }
+
+  // Builds service summary values from service-related source detail fields.
+  function collectServiceValues(details) {
+    return details
+      .filter(detail => ["services_requested", "other_services_requested"].includes(detail.field_name))
+      .flatMap(detail => splitServiceValue(detail.field_value));
   }
 
   // Returns unique values from a list, preserving the first-seen order.
@@ -1095,11 +1906,58 @@
   }
 
   // Pulls values for one named source-detail field from a client's detail rows.
-  function getDetailValues(details, fieldName) {
+  function getDetailValues(details, fieldName, limit = 6) {
     return uniqueValues(
       details.filter(detail => detail.field_name === fieldName),
-      detail => detail.field_value
+      detail => detail.field_value,
+      limit
     );
+  }
+
+  // Builds rows for the source-specific Additional Info profile tab.
+  function buildAdditionalInfoRows(details) {
+    // Each configured field can have several source values across imports, so
+    // combine unique values into one readable row per field.
+    return additionalInfoFields
+      .map(item => ({
+        label: item.label,
+        value: getDetailValues(details, item.field, 8).join(", ")
+      }))
+      .filter(row => row.value);
+  }
+
+  // Builds short visible flags for the main profile without crowding the card layout.
+  function buildKeyInfoChips(details) {
+    // These are the high-value facts that are useful at a glance. The rest stay
+    // in Additional Info so the profile does not become another hard-to-read table.
+    const keyFields = [
+      { field: "jotform_client_status", label: "JotForm" },
+      { field: "identity_enrichment_status", label: "Identity" },
+      { field: "dc_resident", label: "DC Resident" },
+      { field: "nsv_resident", label: "NSV Resident" },
+      { field: "snap_status", label: "SNAP" },
+      { field: "has_photo_id", label: "Photo ID" },
+      { field: "military_veteran", label: "Veteran" },
+      { field: "current_housing", label: "Housing" },
+      { field: "primary_language", label: "Language" },
+      { field: "visit_status", label: "Visit Status" },
+      { field: "housed", label: "Housed" }
+    ];
+
+    return keyFields.flatMap(item => {
+      const values = getDetailValues(details, item.field, 2);
+      return values.map(value => `${item.label}: ${value}`);
+    });
+  }
+
+  // Switches between the compact summary and source-specific additional info.
+  function switchClientProfileTab(tabName) {
+    document.querySelectorAll(".profile-tab-button").forEach(button => {
+      button.classList.toggle("active", button.dataset.profileTab === tabName);
+    });
+    document.querySelectorAll(".profile-tab-panel").forEach(panel => {
+      panel.classList.toggle("active", panel.dataset.profilePanel === tabName);
+    });
   }
 
   // Renders small pill-shaped labels for profile summary values.
@@ -1123,16 +1981,14 @@
 
   // Closes the slide-in client profile and returns the table to full width.
   function closeClientProfile() {
-    const workspace = document.getElementById("clientWorkspace");
-    const profile = document.getElementById("clientProfile");
+    const { workspace, profile } = dom.clients;
     workspace.classList.remove("profile-open");
     profile.setAttribute("aria-hidden", "true");
   }
 
   // Loads and displays the profile panel for one NSV client.
   async function viewClientProfile(nsvClientId) {
-    const workspace = document.getElementById("clientWorkspace");
-    const profile = document.getElementById("clientProfile");
+    const { workspace, profile } = dom.clients;
     workspace.classList.add("profile-open");
     profile.setAttribute("aria-hidden", "false");
     profile.innerHTML = "<p>Loading client profile...</p>";
@@ -1151,49 +2007,90 @@
       const sources = detailPayload.sources || [];
       const details = detailPayload.details || [];
 
-      // Build summary counts used by the profile cards.
-      const programCounts = countBy(programs, program => program.program_name);
-      const sourceCounts = countBy(sources, source => source.source_system);
-      const serviceCounts = countBy(
-        details.filter(detail => detail.field_name === "services_requested"),
-        detail => detail.field_value
-      );
-      const sourceFiles = uniqueValues(sources, source => source.original_file, 4);
-      const nsvPrograms = getDetailValues(details, "nsv_program");
-      const primaryProgram = nsvPrograms[0] || (programCounts[0] ? programCounts[0][0] : "No program recorded");
-      const primaryProgramContext = nsvPrograms.length
-        ? "NSV program from source details"
-        : "Imported program record";
+      const profileModel = buildClientProfileModel({ client, programs, sources, details });
+      profile.innerHTML = renderClientProfile(profileModel);
+    } catch {
+      profile.innerHTML = "<p>Unable to load client profile. Make sure the backend and database are running.</p>";
+    }
+  }
 
-      // These arrays are rendered by renderDetailRows below.
-      const identityRows = [
+  // Converts raw client/detail rows into the grouped values used by the profile cards.
+  function buildClientProfileModel({ client, programs, sources, details }) {
+    const programCounts = countBy(programs, program => program.program_name);
+    const sourceCounts = countBy(sources, source => source.source_system);
+    const serviceCounts = countBy(collectServiceValues(details), service => service);
+    const sourceFiles = uniqueValues(sources, source => source.original_file, 4);
+    const nsvPrograms = getDetailValues(details, "nsv_program");
+    const keyInfoChips = buildKeyInfoChips(details);
+    const additionalInfoRows = buildAdditionalInfoRows(details);
+    const primaryProgram = nsvPrograms[0] || (programCounts[0] ? programCounts[0][0] : "No program recorded");
+    const primaryProgramContext = nsvPrograms.length
+      ? "NSV program from source details"
+      : "Imported program record";
+
+    return {
+      client,
+      programs,
+      sources,
+      programCounts,
+      sourceCounts,
+      serviceCounts,
+      keyInfoChips,
+      additionalInfoRows,
+      primaryProgram,
+      primaryProgramContext,
+      identityRows: [
         { label: "DOB", value: client.date_of_birth ?? "N/A" },
         { label: "NSV ID", value: client.nsv_client_id ?? "N/A" },
         { label: "HMIS ID", value: client.hmis_id ?? "N/A" },
         { label: "eCW ID", value: client.ecw_id ?? "N/A" },
-      ];
-      const personalRows = [
+      ],
+      personalRows: [
         { label: "Language", value: getDetailValues(details, "primary_language")[0] ?? "N/A" },
         { label: "Housing", value: getDetailValues(details, "current_housing")[0] ?? "N/A" },
-        { label: "DC Resident", value: getDetailValues(details, "dc_resident")[0] ?? "N/A" },
-        { label: "NSV Resident", value: getDetailValues(details, "nsv_resident")[0] ?? "N/A" },
-      ];
-      const sourceRows = [
+        { label: "JotForm Status", value: getDetailValues(details, "jotform_client_status")[0] ?? "N/A" },
+      ],
+      sourceRows: [
         { label: "Connected sources", value: sourceCounts.map(([source, count]) => `${source} (${count})`).join(", ") || "N/A" },
         { label: "Match methods", value: uniqueValues(sources, source => source.match_method, 4).join(", ") || "N/A" },
         { label: "Recent files", value: sourceFiles.join(", ") || "N/A" },
-      ];
+      ]
+    };
+  }
 
-      // Replace the profile area with a full profile card layout.
-      profile.innerHTML = `
-        <div class="profile-header">
-          <div>
-            <h2>${escapeHtml(client.first_name ?? "N/A")} ${escapeHtml(client.last_name ?? "")}</h2>
-            <p class="profile-subtitle">${escapeHtml(client.nsv_client_id ?? "N/A")} - DOB ${escapeHtml(client.date_of_birth ?? "N/A")}</p>
-          </div>
-          <button class="secondary" onclick="closeClientProfile()">Close</button>
+  // Returns the full HTML layout for the slide-in client profile.
+  function renderClientProfile(model) {
+    const {
+      client,
+      programs,
+      sources,
+      programCounts,
+      sourceCounts,
+      serviceCounts,
+      keyInfoChips,
+      additionalInfoRows,
+      primaryProgram,
+      primaryProgramContext,
+      identityRows,
+      personalRows,
+      sourceRows
+    } = model;
+
+    return `
+      <div class="profile-header">
+        <div>
+          <h2>${escapeHtml(client.first_name ?? "N/A")} ${escapeHtml(client.last_name ?? "")}</h2>
+          <p class="profile-subtitle">${escapeHtml(client.nsv_client_id ?? "N/A")} - DOB ${escapeHtml(client.date_of_birth ?? "N/A")}</p>
         </div>
+        <button class="secondary" onclick="closeClientProfile()">Close</button>
+      </div>
 
+      <div class="profile-tabs">
+        <button class="profile-tab-button active" data-profile-tab="summary" onclick="switchClientProfileTab('summary')">Summary</button>
+        <button class="profile-tab-button" data-profile-tab="additional" onclick="switchClientProfileTab('additional')">Additional Info</button>
+      </div>
+
+      <div class="profile-tab-panel active" data-profile-panel="summary">
         <div class="profile-grid">
           <div class="profile-card large">
             <h3>NSV Program</h3>
@@ -1212,6 +2109,11 @@
             <h3>Sources</h3>
             <div class="metric-value">${escapeHtml(sourceCounts.length)}</div>
             <div class="chip-list">${renderChips(sourceCounts.map(([source]) => source))}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Key Info</h3>
+            <div class="chip-list">${renderChips(keyInfoChips)}</div>
           </div>
 
           <div class="profile-card wide">
@@ -1234,48 +2136,434 @@
             <div class="detail-list">${renderDetailRows(sourceRows)}</div>
           </div>
         </div>
-      `;
-    } catch {
-      profile.innerHTML = "<p>Unable to load client profile. Make sure the backend and database are running.</p>";
-    }
+      </div>
+
+      <div class="profile-tab-panel" data-profile-panel="additional">
+        <div class="profile-grid">
+          <div class="profile-card wide">
+            <h3>Additional Info</h3>
+            <div class="detail-list">${renderDetailRows(additionalInfoRows)}</div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
+  // --- Review queue ---
+
+  const selectedReviewIds = new Set();
+  let visibleReviewIds = [];
+  let reviewPageState = {
+    page: 1,
+    pageSize: 100,
+    total: 0,
+    totalPages: 0
+  };
+
   // Loads records that need manual review and renders the Review Queue table.
-  async function loadReviews() {
-    const table = document.getElementById("reviewsTable");
+  async function loadReviews(page = reviewPageState.page) {
+    const table = dom.reviews.table;
+    const pageSize = Number(dom.reviews.pageSize.value || 100);
     table.innerHTML = "<p>Loading review queue...</p>";
+    dom.reviews.message.style.display = "none";
 
     try {
-      const response = await fetch("/reviews");
-      const reviews = await response.json();
+      const params = new URLSearchParams({ page, page_size: pageSize });
+      const response = await fetch(`/reviews?${params.toString()}`);
+      const payload = await response.json();
+      const reviews = payload.items || [];
+
+      reviewPageState = {
+        page: payload.page || page,
+        pageSize: payload.page_size || pageSize,
+        total: payload.total || 0,
+        totalPages: payload.total_pages || 0
+      };
 
       if (!reviews.length) {
-        table.innerHTML = "<p>No records need review.</p>";
+        table.innerHTML = "<p>No records need review on this page.</p>";
+        updateReviewPager();
         return;
       }
 
-      // Build one table row per review item returned by the backend.
-      let html = "<table><thead><tr><th>Review ID</th><th>Source</th><th>Program</th><th>Name</th><th>DOB</th><th>Possible NSV ID</th><th>Confidence</th><th>Reason</th></tr></thead><tbody>";
-      reviews.forEach(r => {
-        html += `<tr><td>${r.review_id}</td><td>${r.source_system}</td><td>${r.program_name ?? ""}</td><td>${r.suggested_first_name ?? ""} ${r.suggested_last_name ?? ""}</td><td>${r.suggested_dob ?? ""}</td><td>${r.possible_nsv_client_id ?? ""}</td><td>${r.confidence_score}</td><td>${r.review_reason}</td></tr>`;
-      });
-      html += "</tbody></table>";
-      table.innerHTML = html;
+      table.innerHTML = renderReviewTable(reviews);
+      updateReviewPager();
     } catch {
       table.innerHTML = "<p>Unable to load review queue. Make sure the FastAPI backend and database are running.</p>";
     }
   }
 
+  // Moves through paginated review results without loading thousands of rows at once.
+  function changeReviewPage(direction) {
+    const nextPage = reviewPageState.page + direction;
+    if (nextPage < 1 || (reviewPageState.totalPages && nextPage > reviewPageState.totalPages)) return;
+    loadReviews(nextPage);
+  }
+
+  // Updates the review pager and selected-row controls after every load/change.
+  function updateReviewPager() {
+    const { page, pageSize, total, totalPages } = reviewPageState;
+    const start = total ? ((page - 1) * pageSize) + 1 : 0;
+    const end = Math.min(page * pageSize, total);
+
+    dom.reviews.pageStatus.textContent = total
+      ? `Showing ${start}-${end} of ${total} review rows`
+      : "No review rows";
+    dom.reviews.prevButton.disabled = page <= 1;
+    dom.reviews.nextButton.disabled = !totalPages || page >= totalPages;
+    dom.reviews.selectedCount.textContent = `${selectedReviewIds.size} checked for bulk action`;
+    dom.reviews.applySelectedButton.disabled = selectedReviewIds.size === 0;
+    dom.reviews.applySelectedButton.title = selectedReviewIds.size
+      ? "Apply each checked row's recommended action."
+      : "Check one or more rows first.";
+  }
+
+  // Builds the Review Queue table from backend review records.
+  function renderReviewTable(reviews) {
+    visibleReviewIds = reviews.map(review => review.review_id);
+    const rows = reviews.map(review => {
+      const checked = selectedReviewIds.has(review.review_id) ? "checked" : "";
+      const possibleClient = review.possible_client;
+      const suggestedName = `${review.suggested_first_name ?? ""} ${review.suggested_last_name ?? ""}`.trim() || "N/A";
+      const possibleName = possibleClient
+        ? `${possibleClient.first_name ?? ""} ${possibleClient.last_name ?? ""}`.trim()
+        : "No suggested existing profile";
+      const recommendedLabel = review.recommended_action === "accept_match"
+        ? "Accept suggested match"
+        : "Create partial profile";
+      const recommendationHelp = review.recommended_action === "accept_match"
+        ? "Recommended: attach this row to the possible profile."
+        : "Recommended: create a partial profile and fill missing DOB later.";
+      const targetId = possibleClient ? possibleClient.nsv_client_id : "";
+
+      return `
+      <tr>
+        <td class="checkbox-cell">
+          <label class="bulk-select-label" title="Check this row to include it when you apply recommendations in bulk.">
+            <input type="checkbox" ${checked} aria-label="Select review ${escapeHtml(review.review_id)} for bulk recommendation" onchange="toggleReviewSelection(${review.review_id}, this.checked)" />
+          </label>
+        </td>
+        <td>${escapeHtml(review.review_id)}</td>
+        <td>${escapeHtml(review.source_system)}</td>
+        <td>${escapeHtml(review.program_name ?? "")}</td>
+        <td>
+          <div class="review-compare">
+            <div>
+              <strong>Imported row</strong>
+              <span>${escapeHtml(suggestedName)}</span>
+              <small>DOB: ${escapeHtml(review.suggested_dob ?? "N/A")}</small>
+            </div>
+            <div>
+              <strong>Possible profile</strong>
+              <span>${escapeHtml(possibleName)}</span>
+              <small>${escapeHtml(targetId || "No NSV ID yet")} ${possibleClient ? `- DOB: ${escapeHtml(possibleClient.date_of_birth ?? "N/A")}` : ""}</small>
+            </div>
+          </div>
+        </td>
+        <td>${escapeHtml(review.confidence_score)}</td>
+        <td>${escapeHtml(review.review_reason)}</td>
+        <td>
+          <div class="review-actions">
+            <span class="recommendation-pill" title="${escapeHtml(recommendationHelp)}">${escapeHtml(recommendedLabel)}</span>
+            ${possibleClient ? `<button type="button" class="secondary" data-review-id="${escapeHtml(review.review_id)}" data-review-action="accept_match" data-target-id="${escapeHtml(targetId)}">Same person</button>` : ""}
+            <button type="button" class="secondary" data-review-id="${escapeHtml(review.review_id)}" data-review-action="${escapeHtml(review.recommended_action)}" data-target-id="${escapeHtml(targetId)}">Do recommendation</button>
+            <button type="button" class="secondary" data-review-id="${escapeHtml(review.review_id)}" data-review-action="dismiss" data-target-id="">Dismiss</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    }).join("");
+
+    return `
+      <table>
+        <thead>
+          <tr><th>Bulk</th><th>Review ID</th><th>Source</th><th>Program</th><th>Verify Match</th><th>Confidence</th><th>Reason</th><th>Recommended Action</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  // Tracks which review rows should receive their recommended operation in bulk.
+  function toggleReviewSelection(reviewId, isSelected) {
+    if (isSelected) {
+      selectedReviewIds.add(reviewId);
+    } else {
+      selectedReviewIds.delete(reviewId);
+    }
+    updateReviewPager();
+  }
+
+  // Selects every visible review row so the bulk button has an obvious workflow.
+  function selectVisibleReviewRows() {
+    visibleReviewIds.forEach(reviewId => selectedReviewIds.add(reviewId));
+    dom.reviews.table.querySelectorAll("input[type='checkbox']").forEach(input => {
+      input.checked = true;
+    });
+    updateReviewPager();
+  }
+
+  // Clears selected review rows without changing the review queue itself.
+  function clearReviewSelection() {
+    selectedReviewIds.clear();
+    dom.reviews.table.querySelectorAll("input[type='checkbox']").forEach(input => {
+      input.checked = false;
+    });
+    updateReviewPager();
+  }
+
+  // Applies one manual review decision and reloads the current page.
+  async function applyReviewAction(reviewId, action, targetNsvClientId = "") {
+    const labels = {
+      accept_match: "attach this imported row to the suggested profile",
+      create_partial_profile: "create a partial profile from this row",
+      dismiss: "dismiss this review row"
+    };
+    const confirmed = window.confirm(`Confirm: ${labels[action] || action}?`);
+    if (!confirmed) return;
+
+    dom.reviews.message.style.display = "block";
+    dom.reviews.message.textContent = "Applying review decision...";
+
+    const response = await fetch(`/reviews/${reviewId}/action`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, target_nsv_client_id: targetNsvClientId || null })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      dom.reviews.message.textContent = "Review action failed: " + JSON.stringify(result, null, 2);
+      return;
+    }
+
+    selectedReviewIds.delete(reviewId);
+    dom.reviews.message.textContent = `Review row ${reviewId} resolved.`;
+    await loadReviews(reviewPageState.page);
+    loadStats();
+  }
+
+  // Applies recommended operations for all checked rows on the Review Queue page.
+  async function applySelectedReviewRecommendations() {
+    const reviewIds = [...selectedReviewIds];
+    if (!reviewIds.length) return;
+
+    const confirmed = window.confirm(
+      `Apply recommended operations to ${reviewIds.length} selected review row${reviewIds.length === 1 ? "" : "s"}?`
+    );
+    if (!confirmed) return;
+
+    dom.reviews.message.style.display = "block";
+    dom.reviews.message.textContent = "Applying selected recommendations...";
+
+    const response = await fetch("/reviews/apply-recommended", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ review_ids: reviewIds })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      dom.reviews.message.textContent = "Bulk review action failed: " + JSON.stringify(result, null, 2);
+      return;
+    }
+
+    selectedReviewIds.clear();
+    dom.reviews.message.textContent =
+      `Resolved ${result.resolved.length} row(s). Failed ${result.failed.length} row(s).`;
+    await loadReviews(reviewPageState.page);
+    loadStats();
+  }
+
+  // --- Admin settings ---
+
+  const selectedAdminClientIds = new Set();
+
+  // Pressing Enter in the Admin client search box runs the cleanup search.
+  dom.admin.search.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      loadAdminClients();
+    }
+  });
+
+  // Loads client rows into the Admin checkbox list.
+  async function loadAdminClients() {
+    const params = new URLSearchParams({
+      page: "1",
+      page_size: dom.admin.pageSize.value || "50"
+    });
+    const search = dom.admin.search.value.trim();
+    if (search) params.set("search", search);
+
+    dom.admin.clientList.innerHTML = "<p>Loading clients...</p>";
+
+    try {
+      const response = await fetch(`/clients?${params.toString()}`);
+      const payload = await response.json();
+      const clients = payload.items || [];
+
+      if (!clients.length) {
+        dom.admin.clientList.innerHTML = "<p>No clients found.</p>";
+        return;
+      }
+
+      dom.admin.clientList.innerHTML = renderAdminClientSelectionTable(clients);
+      updateAdminDeleteButtons();
+    } catch {
+      dom.admin.clientList.innerHTML = "<p>Unable to load clients for admin cleanup.</p>";
+    }
+  }
+
+  // Builds the Admin checkbox table for deleting selected profiles.
+  function renderAdminClientSelectionTable(clients) {
+    const rows = clients.map(client => {
+      const checked = selectedAdminClientIds.has(client.nsv_client_id) ? "checked" : "";
+      return `
+        <tr>
+          <td class="checkbox-cell">
+            <input type="checkbox" ${checked} onchange="toggleAdminClientSelection('${escapeHtml(client.nsv_client_id)}', this.checked)" />
+          </td>
+          <td>${escapeHtml(client.nsv_client_id ?? "N/A")}</td>
+          <td>${escapeHtml(client.first_name ?? "N/A")} ${escapeHtml(client.last_name ?? "")}</td>
+          <td>${escapeHtml(client.date_of_birth ?? "N/A")}</td>
+          <td>${escapeHtml(client.hmis_id ?? "N/A")}</td>
+          <td>${escapeHtml(client.ecw_id ?? "N/A")}</td>
+        </tr>
+      `;
+    }).join("");
+
+    return `
+      <table>
+        <thead>
+          <tr><th></th><th>NSV ID</th><th>Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  // Tracks which clients are selected for deletion.
+  function toggleAdminClientSelection(nsvClientId, isSelected) {
+    if (isSelected) {
+      selectedAdminClientIds.add(nsvClientId);
+    } else {
+      selectedAdminClientIds.delete(nsvClientId);
+    }
+    updateAdminDeleteButtons();
+  }
+
+  // Clears all selected client checkboxes in Admin settings.
+  function clearAdminClientSelection() {
+    selectedAdminClientIds.clear();
+    if (dom.admin.bulkDeleteSlider) dom.admin.bulkDeleteSlider.value = "0";
+    loadAdminClients();
+    updateAdminDeleteButtons();
+  }
+
+  // Updates destructive-action buttons and safety text.
+  function updateAdminDeleteButtons() {
+    const selectedCount = selectedAdminClientIds.size;
+    const bulkDeleteUnlocked = Number(dom.admin.bulkDeleteSlider.value) === 100;
+    const clearDatabaseUnlocked = Number(dom.admin.clearDatabaseSlider.value) === 100;
+
+    // Small deletes only need the browser confirmation. Larger deletes and full
+    // resets require the slider so the action feels intentionally destructive.
+    dom.admin.selectedCount.textContent = `${selectedCount} selected`;
+    dom.admin.bulkDeleteSafety.style.display = selectedCount >= 10 ? "grid" : "none";
+    dom.admin.bulkDeleteSliderStatus.textContent = bulkDeleteUnlocked
+      ? "Bulk delete safety unlocked."
+      : "Bulk delete safety not unlocked.";
+    dom.admin.clearDatabaseSliderStatus.textContent = clearDatabaseUnlocked
+      ? "Full reset unlocked."
+      : "Full reset is locked.";
+
+    dom.admin.deleteSelectedButton.disabled = selectedCount === 0 || (selectedCount >= 10 && !bulkDeleteUnlocked);
+    dom.admin.clearDatabaseButton.disabled = !clearDatabaseUnlocked;
+  }
+
+  // Deletes the checked client profiles after a confirmation dialog.
+  async function deleteSelectedClients() {
+    const selectedIds = [...selectedAdminClientIds];
+    if (!selectedIds.length) return;
+
+    // The backend performs the real deletion; this dialog is the final visible
+    // pause before selected client records and their related imports are removed.
+    const confirmed = window.confirm(
+      `Delete ${selectedIds.length} selected profile${selectedIds.length === 1 ? "" : "s"}?\n\nThis removes their client record, source rows, details, and enrollments from the local database.`
+    );
+    if (!confirmed) return;
+
+    dom.admin.clientMessage.style.display = "block";
+    dom.admin.clientMessage.textContent = "Deleting selected profiles...";
+
+    const response = await fetch("/admin/clients", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nsv_client_ids: selectedIds })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      dom.admin.clientMessage.textContent = "Delete failed: " + JSON.stringify(result, null, 2);
+      return;
+    }
+
+    selectedAdminClientIds.clear();
+    dom.admin.bulkDeleteSlider.value = "0";
+    dom.admin.clientMessage.textContent = `Deleted ${result.deleted_clients} client profile(s).`;
+    await loadAdminClients();
+    loadStats();
+  }
+
+  // Clears every local data table after slider and dialog confirmation.
+  async function clearEntireDatabase() {
+    // This is intentionally more guarded than deleting a few selected profiles.
+    // The browser slider unlocks the button, and the backend still requires a
+    // literal "DELETE ALL" confirmation in the request body.
+    const confirmed = window.confirm(
+      "Clear the entire local database?\n\nThis deletes all clients, programs, enrollments, source details, review records, import logs, and metrics."
+    );
+    if (!confirmed) return;
+
+    dom.admin.clearDatabaseMessage.style.display = "block";
+    dom.admin.clearDatabaseMessage.textContent = "Clearing database...";
+
+    const response = await fetch("/admin/database", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmation: "DELETE ALL" })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      dom.admin.clearDatabaseMessage.textContent = "Database reset failed: " + JSON.stringify(result, null, 2);
+      return;
+    }
+
+    selectedAdminClientIds.clear();
+    dom.admin.bulkDeleteSlider.value = "0";
+    dom.admin.clearDatabaseSlider.value = "0";
+    dom.admin.clearDatabaseMessage.textContent = "Database cleared. The app is ready for a clean test import.";
+    updateAdminDeleteButtons();
+    await loadAdminClients();
+    loadStats();
+    loadMetricsSummary();
+  }
+
+  // --- Upload workflow ---
+
   // Store references to the upload UI elements so later functions can update them.
-  const dropZone = document.getElementById("dropZone");
-  const fileInput = document.getElementById("fileInput");
-  const previewSection = document.getElementById("previewSection");
-  const mappingSection = document.getElementById("mappingSection");
-  const fileInfo = document.getElementById("fileInfo");
-  const previewTable = document.getElementById("previewTable");
-  const mappingForm = document.getElementById("mappingForm");
-  const importButton = document.getElementById("importButton");
-  const message = document.getElementById("message");
+  const {
+    dropZone,
+    fileInput,
+    previewSection,
+    mappingSection,
+    fileInfo,
+    previewTable,
+    mappingForm,
+    importButton,
+    message
+  } = dom.upload;
 
   // The backend returns this after previewing a file; the import step sends it back.
   let currentUploadId = null;
@@ -1362,8 +2650,8 @@
   // Displays the uploaded file name, row count, and first preview rows.
   function renderPreview(data) {
     fileInfo.innerHTML = `
-      <p><strong>File:</strong> ${data.file_name}</p>
-      <p><strong>Total rows:</strong> ${data.row_count}</p>
+      <p><strong>File:</strong> ${escapeHtml(data.file_name)}</p>
+      <p><strong>Total rows:</strong> ${escapeHtml(data.row_count)}</p>
     `;
 
     if (data.rows.length === 0) {
@@ -1371,21 +2659,24 @@
       return;
     }
 
-    // Build the preview table using the columns and rows returned by the backend.
-    let html = "<table><thead><tr>";
-    data.columns.forEach(col => html += `<th>${col}</th>`);
-    html += "</tr></thead><tbody>";
+    previewTable.innerHTML = renderPreviewTable(data);
+  }
 
-    data.rows.forEach(row => {
-      html += "<tr>";
-      data.columns.forEach(col => {
-        html += `<td>${row[col] ?? ""}</td>`;
-      });
-      html += "</tr>";
-    });
+  // Builds the preview table using the columns and rows returned by the backend.
+  function renderPreviewTable(data) {
+    const headers = data.columns.map(col => `<th>${escapeHtml(col)}</th>`).join("");
+    const rows = data.rows.map(row => `
+      <tr>
+        ${data.columns.map(col => `<td>${escapeHtml(row[col] ?? "")}</td>`).join("")}
+      </tr>
+    `).join("");
 
-    html += "</tbody></table>";
-    previewTable.innerHTML = html;
+    return `
+      <table>
+        <thead><tr>${headers}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
   }
 
   // Guesses a system field from a spreadsheet column name.
@@ -1424,7 +2715,7 @@
     let html = "<table><thead><tr><th>Spreadsheet Column</th><th>Map To</th></tr></thead><tbody>";
 
     columns.forEach(col => {
-      html += `<tr><td>${col}</td><td><select data-column="${col}">`;
+      html += `<tr><td>${escapeHtml(col)}</td><td><select data-column="${escapeHtml(col)}">`;
 
       // Pre-select a likely mapping when the column name is recognized.
       const guessed = guessField(col);
@@ -1443,8 +2734,8 @@
 
   // Final client import step: send source/program/mapping data to the backend.
   importButton.addEventListener("click", async () => {
-    const sourceSystem = document.getElementById("sourceSystem").value;
-    const programName = document.getElementById("programName").value.trim();
+    const sourceSystem = dom.upload.sourceSystem.value;
+    const programName = dom.upload.programName.value.trim();
 
     // A previewed upload is required before importing.
     if (!currentUploadId) {
@@ -1458,17 +2749,7 @@
       return;
     }
 
-    // Convert the mapping dropdown selections into a JSON object.
-    const selects = mappingForm.querySelectorAll("select");
-    const columnMapping = {};
-
-    selects.forEach(select => {
-      const sourceColumn = select.getAttribute("data-column");
-      const targetField = select.value;
-      if (targetField) {
-        columnMapping[sourceColumn] = targetField;
-      }
-    });
+    const columnMapping = collectColumnMapping();
 
     showMessage("Importing data...");
 
@@ -1494,7 +2775,7 @@
     }
 
     // Show the import summary returned by the backend.
-    showMessage(
+    showImportCompleteMessage(
       `Import complete.\n\n` +
       `Rows processed: ${result.rows_processed}\n` +
       `New clients created: ${result.rows_created}\n` +
@@ -1507,10 +2788,37 @@
     loadStats();
   });
 
+  // Converts the mapping dropdown selections into the backend import format.
+  function collectColumnMapping() {
+    const columnMapping = {};
+    const selects = mappingForm.querySelectorAll("select");
+
+    selects.forEach(select => {
+      const sourceColumn = select.getAttribute("data-column");
+      const targetField = select.value;
+      if (targetField) columnMapping[sourceColumn] = targetField;
+    });
+
+    return columnMapping;
+  }
+
   // Displays status text in the Upload Data tab message box.
   function showMessage(text) {
     message.style.display = "block";
     message.textContent = text;
+  }
+
+  // Displays an import success message with direct next-step buttons.
+  function showImportCompleteMessage(text) {
+    message.style.display = "block";
+    message.innerHTML = `
+      <div>${escapeHtml(text)}</div>
+      <div class="quick-actions">
+        <button class="secondary" onclick="navigateToTab('clients')">Search Imported Clients</button>
+        <button class="secondary" onclick="openReviewQueue()">Review Unmatched Records</button>
+        <button class="secondary" onclick="navigateToTab('overview')">View Updated Overview</button>
+      </div>
+    `;
   }
 </script>
 </body>

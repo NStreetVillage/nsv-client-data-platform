@@ -8,19 +8,32 @@ data.
 
 import os
 import uuid
+import json
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import pandas as pd
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from .database import SessionLocal
 from .models import Client, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch, ProgramMetric
 from .schemas import ClientOut
-from .importer import preview_file, import_file
+from .importer import (
+    add_identity_enrichment_detail,
+    add_source_details,
+    create_client,
+    extract_enrollment_dates,
+    extract_identity,
+    extract_status,
+    get_or_create_program,
+    import_file,
+    preview_file,
+    update_client_from_row,
+)
 from .metrics import get_metrics_summary, import_metrics_file
 from .utils import parse_date_candidates
 
@@ -38,6 +51,31 @@ class ImportRequest(BaseModel):
     source_system: str = ""
     program_name: str = ""
     column_mapping: Dict[str, str] = {}
+
+
+class DeleteClientsRequest(BaseModel):
+    """Request body for deleting selected client profiles from Admin settings."""
+
+    nsv_client_ids: List[str]
+
+
+class ClearDatabaseRequest(BaseModel):
+    """Request body for clearing all demo/import data from Admin settings."""
+
+    confirmation: str = ""
+
+
+class ReviewActionRequest(BaseModel):
+    """Request body for resolving one review queue row."""
+
+    action: str
+    target_nsv_client_id: Optional[str] = None
+
+
+class BulkReviewActionRequest(BaseModel):
+    """Request body for resolving selected review rows at once."""
+
+    review_ids: List[int]
 
 
 def get_db():
@@ -69,7 +107,7 @@ def upload_page():
 def get_clients(
     search: Optional[str] = Query(default=None),
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=50, ge=10, le=100),
+    page_size: int = Query(default=50, ge=10, le=500),
     db: Session = Depends(get_db),
 ):
     """Search and paginate master client records for the Clients tab."""
@@ -245,6 +283,127 @@ def get_stats(db: Session = Depends(get_db)):
     }
 
 
+def delete_client_records(db: Session, nsv_client_ids: List[str]):
+    """Delete clients and dependent records that point at those NSV client IDs."""
+
+    if not nsv_client_ids:
+        return {
+            "deleted_clients": 0,
+            "deleted_sources": 0,
+            "deleted_details": 0,
+            "deleted_enrollments": 0,
+            "deleted_reviews": 0,
+        }
+
+    # Delete child/source rows first so the client master rows do not leave
+    # orphaned profile details, enrollments, or review queue references behind.
+    deleted_sources = db.query(ClientSource).filter(ClientSource.nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
+    deleted_details = db.query(SourceDetail).filter(SourceDetail.nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
+    deleted_enrollments = db.query(Enrollment).filter(Enrollment.nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
+    deleted_reviews = db.query(PotentialMatch).filter(PotentialMatch.possible_nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
+    deleted_clients = db.query(Client).filter(Client.nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
+
+    return {
+        "deleted_clients": deleted_clients,
+        "deleted_sources": deleted_sources,
+        "deleted_details": deleted_details,
+        "deleted_enrollments": deleted_enrollments,
+        "deleted_reviews": deleted_reviews,
+    }
+
+
+@app.delete("/admin/clients")
+def admin_delete_clients(request: DeleteClientsRequest, db: Session = Depends(get_db)):
+    """Delete selected client profiles and their dependent imported records."""
+
+    # The frontend sends NSV IDs from checked rows. De-duping here protects the
+    # endpoint if the browser sends the same ID twice.
+    nsv_client_ids = sorted({client_id.strip() for client_id in request.nsv_client_ids if client_id.strip()})
+    if not nsv_client_ids:
+        raise HTTPException(status_code=400, detail="Select at least one client to delete.")
+
+    result = delete_client_records(db, nsv_client_ids)
+    db.commit()
+
+    return {
+        "requested_clients": len(nsv_client_ids),
+        **result,
+    }
+
+
+@app.delete("/admin/database")
+def admin_clear_database(request: ClearDatabaseRequest, db: Session = Depends(get_db)):
+    """Clear all local demo/import data tables for a clean testing slate."""
+
+    # The slider lives in the browser, but the backend still requires a literal
+    # confirmation string so an accidental request cannot wipe the database.
+    if request.confirmation != "DELETE ALL":
+        raise HTTPException(status_code=400, detail='Confirmation must be exactly "DELETE ALL".')
+
+    # Clear dependent/import tables before clients and programs because they are
+    # the records that point back to master client/program rows.
+    deleted = {
+        "source_details": db.query(SourceDetail).delete(synchronize_session=False),
+        "client_sources": db.query(ClientSource).delete(synchronize_session=False),
+        "enrollments": db.query(Enrollment).delete(synchronize_session=False),
+        "potential_matches": db.query(PotentialMatch).delete(synchronize_session=False),
+        "imports": db.query(ImportLog).delete(synchronize_session=False),
+        "program_metrics": db.query(ProgramMetric).delete(synchronize_session=False),
+        "clients": db.query(Client).delete(synchronize_session=False),
+        "programs": db.query(Program).delete(synchronize_session=False),
+    }
+    db.commit()
+
+    return {"status": "cleared", "deleted": deleted}
+
+
+def attach_review_row_to_client(db: Session, review: PotentialMatch, client: Client, match_method: str):
+    """Move a reviewed source row into the normal imported-record tables."""
+
+    raw_row = json.loads(review.raw_data_json or "{}")
+    row = pd.Series(raw_row)
+    first_name, last_name, dob, hmis_id, ecw_id = extract_identity(row)
+
+    update_client_from_row(client, hmis_id, ecw_id, dob, row)
+    source_client_id = hmis_id or ecw_id
+
+    db.add(ClientSource(
+        nsv_client_id=client.nsv_client_id,
+        source_system=review.source_system,
+        source_client_id=source_client_id,
+        original_file=review.original_file,
+        raw_data_json=review.raw_data_json,
+        match_method=match_method,
+        confidence_score=review.confidence_score,
+    ))
+
+    add_source_details(db, row, client, review.source_system, review.program_name, Path(review.original_file or "review_row"))
+    if not dob and not client.date_of_birth:
+        add_identity_enrichment_detail(
+            db=db,
+            client=client,
+            source_system=review.source_system,
+            program_name=review.program_name,
+            path=Path(review.original_file or "review_row"),
+            reason="Needs DOB from another import",
+        )
+
+    program = get_or_create_program(db, review.program_name or "Unknown Program", review.source_system)
+    entry_date, exit_date = extract_enrollment_dates(row)
+    status = extract_status(row)
+    db.add(Enrollment(
+        nsv_client_id=client.nsv_client_id,
+        program_id=program.program_id,
+        entry_date=entry_date,
+        exit_date=exit_date,
+        status=status,
+    ))
+
+    review.possible_nsv_client_id = client.nsv_client_id
+    review.status = "Resolved"
+    review.review_reason = f"Resolved - {match_method}"
+
+
 @app.post("/upload/preview")
 async def upload_preview(file: UploadFile = File(...)):
     """Save an uploaded CSV/Excel file and return preview rows/columns."""
@@ -309,29 +468,136 @@ def metrics_summary(db: Session = Depends(get_db)):
     return get_metrics_summary(db)
 
 
-@app.get("/reviews")
-def get_reviews(db: Session = Depends(get_db)):
-    """Return the newest records that need manual matching review."""
+def serialize_review(review: PotentialMatch, possible_client: Optional[Client] = None):
+    """Convert one review row into the shape used by the Review Queue UI."""
 
+    recommended_action = "accept_match" if review.possible_nsv_client_id else "create_partial_profile"
+    return {
+        "review_id": review.review_id,
+        "source_system": review.source_system,
+        "program_name": review.program_name,
+        "possible_nsv_client_id": review.possible_nsv_client_id,
+        "possible_client": ClientOut.model_validate(possible_client).model_dump() if possible_client else None,
+        "suggested_first_name": review.suggested_first_name,
+        "suggested_last_name": review.suggested_last_name,
+        "suggested_dob": str(review.suggested_dob) if review.suggested_dob else None,
+        "confidence_score": review.confidence_score,
+        "review_reason": review.review_reason,
+        "recommended_action": recommended_action,
+        "status": review.status,
+    }
+
+
+@app.get("/reviews")
+def get_reviews(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    """Return paginated records that need manual matching review."""
+
+    query = db.query(PotentialMatch).filter(PotentialMatch.status == "Needs Review")
+    total = query.count()
     reviews = (
-        db.query(PotentialMatch)
-        .filter(PotentialMatch.status == "Needs Review")
-        .order_by(PotentialMatch.created_at.desc())
-        .limit(100)
+        query
+        .order_by(PotentialMatch.created_at.desc(), PotentialMatch.review_id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
-    return [
-        {
-            "review_id": r.review_id,
-            "source_system": r.source_system,
-            "program_name": r.program_name,
-            "possible_nsv_client_id": r.possible_nsv_client_id,
-            "suggested_first_name": r.suggested_first_name,
-            "suggested_last_name": r.suggested_last_name,
-            "suggested_dob": str(r.suggested_dob) if r.suggested_dob else None,
-            "confidence_score": r.confidence_score,
-            "review_reason": r.review_reason,
-            "status": r.status,
+    possible_ids = [review.possible_nsv_client_id for review in reviews if review.possible_nsv_client_id]
+    possible_clients = {}
+    if possible_ids:
+        possible_clients = {
+            client.nsv_client_id: client
+            for client in db.query(Client).filter(Client.nsv_client_id.in_(possible_ids)).all()
         }
-        for r in reviews
-    ]
+
+    return {
+        "items": [
+            serialize_review(review, possible_clients.get(review.possible_nsv_client_id))
+            for review in reviews
+        ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size if total else 0,
+    }
+
+
+@app.post("/reviews/{review_id}/action")
+def apply_review_action(review_id: int, request: ReviewActionRequest, db: Session = Depends(get_db)):
+    """Resolve one review row by accepting, creating, or dismissing it."""
+
+    review = db.query(PotentialMatch).filter(PotentialMatch.review_id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review row not found.")
+    if review.status != "Needs Review":
+        raise HTTPException(status_code=400, detail="Review row has already been resolved.")
+
+    action = request.action
+    if action == "dismiss":
+        review.status = "Dismissed"
+        review.review_reason = "Dismissed by reviewer"
+        db.commit()
+        return {"status": "dismissed", "review_id": review_id}
+
+    if action == "accept_match":
+        target_id = request.target_nsv_client_id or review.possible_nsv_client_id
+        if not target_id:
+            raise HTTPException(status_code=400, detail="No target client was provided for this match.")
+        client = db.query(Client).filter(Client.nsv_client_id == target_id).first()
+        if not client:
+            raise HTTPException(status_code=404, detail="Target client was not found.")
+        attach_review_row_to_client(db, review, client, "Manual review match")
+        db.commit()
+        return {"status": "resolved", "review_id": review_id, "nsv_client_id": client.nsv_client_id}
+
+    if action == "create_partial_profile":
+        row = pd.Series(json.loads(review.raw_data_json or "{}"))
+        first_name, last_name, dob, hmis_id, ecw_id = extract_identity(row)
+        if not first_name or not last_name:
+            raise HTTPException(status_code=400, detail="Cannot create a profile without first and last name.")
+        client = create_client(db, first_name, last_name, dob, hmis_id, ecw_id, row)
+        attach_review_row_to_client(db, review, client, "Manual review created partial profile")
+        db.commit()
+        return {"status": "created", "review_id": review_id, "nsv_client_id": client.nsv_client_id}
+
+    raise HTTPException(status_code=400, detail="Unsupported review action.")
+
+
+@app.post("/reviews/apply-recommended")
+def apply_recommended_reviews(request: BulkReviewActionRequest, db: Session = Depends(get_db)):
+    """Apply recommended actions for selected review queue rows."""
+
+    resolved = []
+    failed = []
+    review_ids = sorted(set(request.review_ids))
+
+    for review_id in review_ids:
+        review = db.query(PotentialMatch).filter(PotentialMatch.review_id == review_id).first()
+        if not review or review.status != "Needs Review":
+            failed.append({"review_id": review_id, "reason": "Review row was not found or already resolved."})
+            continue
+
+        try:
+            if review.possible_nsv_client_id:
+                client = db.query(Client).filter(Client.nsv_client_id == review.possible_nsv_client_id).first()
+                if not client:
+                    raise ValueError("Suggested client was not found.")
+                attach_review_row_to_client(db, review, client, "Bulk recommended match")
+                resolved.append({"review_id": review_id, "action": "matched", "nsv_client_id": client.nsv_client_id})
+            else:
+                row = pd.Series(json.loads(review.raw_data_json or "{}"))
+                first_name, last_name, dob, hmis_id, ecw_id = extract_identity(row)
+                if not first_name or not last_name:
+                    raise ValueError("Missing first or last name.")
+                client = create_client(db, first_name, last_name, dob, hmis_id, ecw_id, row)
+                attach_review_row_to_client(db, review, client, "Bulk recommended partial profile")
+                resolved.append({"review_id": review_id, "action": "created", "nsv_client_id": client.nsv_client_id})
+        except Exception as error:
+            db.rollback()
+            failed.append({"review_id": review_id, "reason": str(error)})
+
+    db.commit()
+    return {"resolved": resolved, "failed": failed}

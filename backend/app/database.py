@@ -6,17 +6,27 @@ engine, and exposes the shared session factory and model base class.
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Load values from backend/.env so local development can configure DATABASE_URL.
-load_dotenv()
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(BACKEND_DIR / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is missing. Create a .env file first.")
+
+# SQLite URLs are normally relative to the process working directory. PyCharm,
+# PowerShell, and scripts may launch from different folders, so make local
+# SQLite paths relative to backend/.env instead of wherever Python was started.
+if DATABASE_URL.startswith("sqlite:///"):
+    sqlite_path = DATABASE_URL.replace("sqlite:///", "", 1)
+    if sqlite_path and sqlite_path != ":memory:" and not Path(sqlite_path).is_absolute():
+        DATABASE_URL = f"sqlite:///{(BACKEND_DIR / sqlite_path).resolve().as_posix()}"
 
 # PostgreSQL can hang for a while when unreachable; this keeps failures fast.
 connect_args = {}
