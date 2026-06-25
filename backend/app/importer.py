@@ -24,7 +24,12 @@ class UnsupportedClientImportError(ValueError):
     pass
 
 
-# Known source column names mapped to the canonical field names used internally.
+# ---------------------------------------------------------------------------
+# Column vocabulary
+# ---------------------------------------------------------------------------
+#
+# Source systems use different labels for the same client concepts. These
+# aliases let the importer normalize spreadsheets before matching clients.
 DEFAULT_COLUMN_ALIASES = {
     "first_name": [
         "first_name", "first name", "firstname", "client first name", "patient first name",
@@ -40,11 +45,12 @@ DEFAULT_COLUMN_ALIASES = {
     ],
     "date_of_birth": [
         "date_of_birth", "dob", "birth date", "date of birth", "client dob",
-        "patient dob", "patient date of birth", "date of birth.1"
+        "patient dob", "patient date of birth", "date of birth.1", "date of birth(893)"
     ],
     "hmis_id": [
         "hmis_id", "hmis id", "hmisid", "personal id", "personalid", "client id",
-        "unique id", "dhs client id# - hmis id"
+        "unique id", "dhs client id# - hmis id", "client uid", "client unique id",
+        "most recent hmid"
     ],
     "ecw_id": [
         "ecw_id", "ecw id", "patient id", "patient acct no", "patient account no",
@@ -71,6 +77,81 @@ DEFAULT_COLUMN_ALIASES = {
 }
 
 
+OCCUPANCY_REPORT_COLUMNS = {
+    "program provider id",
+    "households enrolled in hmis",
+    "households moved into housing",
+}
+
+
+# ---------------------------------------------------------------------------
+# File classification signatures
+# ---------------------------------------------------------------------------
+#
+# These signatures are used before import to decide which branch a file should
+# take. Client rosters can create people. Metrics/report files create aggregate
+# ProgramMetric rows. Enrichment-only files may update known clients, but should
+# not create thousands of review rows when identity is incomplete.
+ENRICHMENT_ONLY_SIGNATURES = [
+    {"hmis id", "date of contact"},
+    {"hmis id", "# of service plan approvals"},
+    {"hmis id", "uir category"},
+    {"hmis_id", "date of contact"},
+    {"hmis_id", "# of service plan approvals"},
+    {"hmis_id", "uir category"},
+    {"hmis_id", "number of services"},
+    {"hmis_id", "service provide provider"},
+    {"hmis_id", "service code description"},
+    {"hmis_id", "casenote provider"},
+    {"hmis_id", "count of case notes"},
+    {"hmis_id", "casenote uid"},
+    {"client uid", "client unique id", "number of services"},
+    {"client uid", "client unique id", "service date"},
+    {"client uid", "client unique id", "count of case notes"},
+    {"client uid", "client unique id", "casenote uid"},
+]
+
+
+OPERATIONAL_METRICS_SIGNATURES = [
+    {"hmis id", "date of contact"},
+    {"hmis id", "# of service plan approvals"},
+    {"hmis id", "uir category"},
+    {"hmis id", "first name", "date of birth"},
+    {"hmis id", "project", "entry/service start date"},
+    {"hmis id", "program", "funding source"},
+    {"hmis id", "client full name", "program"},
+    {"hmis_id", "date of contact"},
+    {"hmis_id", "# of service plan approvals"},
+    {"hmis_id", "uir category"},
+    {"hmis_id", "first_name", "date_of_birth"},
+    {"hmis_id", "number of services"},
+    {"hmis_id", "service provide provider"},
+    {"hmis_id", "service code description"},
+    {"hmis_id", "casenote provider"},
+    {"hmis_id", "count of case notes"},
+    {"hmis_id", "casenote uid"},
+    {"hmis_id", "project", "entry/service start date"},
+    {"hmis_id", "program", "funding source"},
+    {"hmis_id", "client full name", "program"},
+    {"hmis_id", "full_name", "program"},
+    {"client uid", "client unique id", "number of services"},
+    {"client uid", "client unique id", "service provide provider"},
+    {"client uid", "client unique id", "service code description"},
+    {"client uid", "client unique id", "casenote provider"},
+    {"client uid", "client unique id", "count of case notes"},
+    {"full_name", "source app", "what can we help you with today?"},
+    {"full_name", "source app"},
+    {"full name", "source app"},
+    {"patient name", "appointment provider name"},
+    {"full_name", "appointment provider name"},
+    {"full_name", "encounter_date", "visit type"},
+    {"ecw_id", "encounter_date", "visit type"},
+    {"full_name", "encounter_date", "visit reason"},
+    {"ecw_id", "encounter_date", "visit reason"},
+    {"nsv program", "what data report"},
+]
+
+
 # Extra source columns that should be kept as SourceDetail records for profiles.
 # Source details are the "extra" facts that do not belong on the core Client row.
 # They let one profile show JotForm, HTH, HMIS, and eCW-specific fields without
@@ -90,9 +171,46 @@ SOURCE_DETAIL_FIELDS = {
     "Name": "source_name",
     "Date of Birth": "source_date_of_birth",
     "Date of Birth.1": "source_date_of_birth_alternate",
+    "Date of Birth(893)": "source_date_of_birth",
     "DOB": "source_date_of_birth",
     "Patient DOB": "source_patient_dob",
+    "Client Uid": "source_client_uid",
+    "Client Unique Id": "source_client_unique_id",
+    "Client First Name": "source_first_name",
+    "Client Middle Name": "source_middle_name",
+    "Client Last Name": "source_last_name",
+    "Middle Name": "source_middle_name",
+    "Unique ID": "source_unique_id",
     "Program": "program",
+    "Program Provider ID": "program_provider_id",
+    "Households Enrolled in HMIS": "households_enrolled_in_hmis",
+    "Households moved into Housing": "households_moved_into_housing",
+    "Number of Services": "number_of_services",
+    "Service Provide Provider": "service_provider",
+    "Service Code Description": "service_code_description",
+    "Provider Specific Service": "provider_specific_service",
+    "Service Date": "service_date",
+    "Service User Creating": "service_user_creating",
+    "Service User Updating": "service_user_updating",
+    "Casenote Provider": "casenote_provider",
+    "Last Case Note": "last_case_note",
+    "Count of Case Notes": "count_of_case_notes",
+    "Casenote Uid": "casenote_uid",
+    "Casenote Note Date (MIN)": "casenote_note_date_min",
+    "Casenote Note Date (MAX)": "casenote_note_date_max",
+    "Casenote Note Date": "casenote_note_date",
+    "Casenote User Creating": "casenote_user_creating",
+    "Casenote User Updating": "casenote_user_updating",
+    "Date of Contact": "date_of_contact",
+    "Type of Contact": "type_of_contact",
+    "Address": "contact_address",
+    "Case Worker - Name": "case_worker_name",
+    "Case Worker Name": "case_worker_name",
+    "# of Service plan approvals": "service_plan_approvals",
+    "Date Created": "date_created",
+    "Date Modified": "date_modified",
+    "Date of UIR": "date_of_uir",
+    "UIR category": "uir_category",
     "Provider Name": "provider_name",
     "Full Provider Name": "full_provider_name",
     "Funding Source": "funding_source",
@@ -189,10 +307,37 @@ def safe_str(value):
 
 
 def is_metrics_layout(df: pd.DataFrame) -> bool:
-    """Detect whether a dataframe looks like a program metrics/planning sheet."""
+    """Detect planning sheets with explicit Program/Target/Metric/Method rows."""
 
     normalized_columns = {str(c).strip().lower() for c in df.columns}
     return {"program", "target", "metric", "method"}.issubset(normalized_columns)
+
+
+def is_occupancy_report_layout(df: pd.DataFrame) -> bool:
+    """Detect HMIS weekly occupancy reports for the metrics branch."""
+
+    normalized_columns = {str(c).strip().lower() for c in df.columns}
+    return OCCUPANCY_REPORT_COLUMNS.issubset(normalized_columns)
+
+
+def is_supported_metrics_layout(df: pd.DataFrame) -> bool:
+    """Return whether a dataframe can be handled by metrics.py."""
+
+    return is_metrics_layout(df) or is_occupancy_report_layout(df) or is_operational_metrics_layout(df)
+
+
+def is_enrichment_only_layout(df: pd.DataFrame) -> bool:
+    """Detect reports that should not create new clients by themselves."""
+
+    normalized_columns = {str(c).strip().lower() for c in df.columns}
+    return any(signature.issubset(normalized_columns) for signature in ENRICHMENT_ONLY_SIGNATURES)
+
+
+def is_operational_metrics_layout(df: pd.DataFrame) -> bool:
+    """Detect operational reports that can produce aggregate rollup metrics."""
+
+    normalized_columns = {str(c).strip().lower() for c in df.columns}
+    return any(signature.issubset(normalized_columns) for signature in OPERATIONAL_METRICS_SIGNATURES)
 
 
 def load_file(path: Path, allow_metrics: bool = False) -> pd.DataFrame:
@@ -219,7 +364,7 @@ def load_file(path: Path, allow_metrics: bool = False) -> pd.DataFrame:
 def normalize_csv_layout(df: pd.DataFrame, allow_metrics: bool = False) -> pd.DataFrame:
     """Fix common CSV layout issues before previewing or importing."""
 
-    if is_metrics_layout(df):
+    if is_metrics_layout(df) or is_occupancy_report_layout(df):
         if allow_metrics:
             return df
         raise UnsupportedClientImportError(
@@ -234,7 +379,12 @@ def normalize_csv_layout(df: pd.DataFrame, allow_metrics: bool = False) -> pd.Da
         values = [safe_str(value) for value in row.tolist()]
         normalized_values = {value.strip().lower() for value in values if value}
 
-        if "hmis id" not in normalized_values:
+        header_signatures = [
+            {"hmis id"},
+            {"program provider id", "households enrolled in hmis"},
+            {"client uid", "client first name", "client last name"},
+        ]
+        if not any(signature.issubset(normalized_values) for signature in header_signatures):
             continue
 
         new_columns = []
@@ -247,7 +397,16 @@ def normalize_csv_layout(df: pd.DataFrame, allow_metrics: bool = False) -> pd.Da
         cleaned = df.iloc[row_index + 1:].copy()
         cleaned.columns = new_columns
         cleaned = cleaned.dropna(how="all")
-        return cleaned.reset_index(drop=True)
+        cleaned = cleaned.reset_index(drop=True)
+
+        if is_metrics_layout(cleaned) or is_occupancy_report_layout(cleaned):
+            if allow_metrics:
+                return cleaned
+            raise UnsupportedClientImportError(
+                "This looks like a program metrics/planning file, not a client import file."
+            )
+
+        return cleaned
 
     return df
 
@@ -271,7 +430,9 @@ def read_best_excel_sheet(path: Path, allow_metrics: bool = False) -> pd.DataFra
     best_score = -1
 
     for sheet in sheets.values():
-        if is_metrics_layout(sheet):
+        sheet = normalize_csv_layout(sheet, allow_metrics=allow_metrics)
+
+        if is_metrics_layout(sheet) or is_occupancy_report_layout(sheet):
             if allow_metrics:
                 return sheet
             raise UnsupportedClientImportError(
@@ -355,7 +516,7 @@ def preview_file(file_path: str, max_rows: int = 10):
     df = load_file(path, allow_metrics=True)
     return {
         "file_name": path.name,
-        "file_type": "metrics" if is_metrics_layout(df) else "client",
+        "file_type": "metrics" if is_supported_metrics_layout(df) else "client",
         "columns": [str(c) for c in df.columns],
         "rows": df.head(max_rows).fillna("").to_dict(orient="records"),
         "row_count": len(df),
@@ -693,6 +854,9 @@ def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
     if len(partial_candidates) == 1:
         return partial_candidates[0], "Partial identity", 0.70, "matched"
 
+    if (hmis_id or ecw_id) and (not first_name or not last_name):
+        return None, "ID-only row needs identity from another import", 0.40, "review"
+
     if not first_name or not last_name:
         return None, "Missing name", 0.00, "failed"
 
@@ -770,15 +934,18 @@ def import_file(
     file_path: str,
     source_system: str,
     program_name: str,
+    original_file_name: Optional[str] = None,
     column_mapping: Optional[Dict[str, str]] = None,
 ):
     """Import a client CSV/Excel file into master clients and related tables."""
 
     path = Path(file_path)
+    display_file_name = original_file_name or path.name
 
     # Read the file and normalize column names before processing rows.
     df = load_file(path)
     df = normalize_import_columns(df, column_mapping)
+    enrichment_only = is_enrichment_only_layout(df)
 
     # Track import results so the frontend can show a summary.
     rows_processed = 0
@@ -800,6 +967,22 @@ def import_file(
             client, match_method, confidence, action = match_client(db, first_name, last_name, dob, hmis_id, ecw_id)
             jotform_status = extract_jotform_client_status(row)
 
+            if enrichment_only and action == "create":
+                rows_failed += 1
+                failed_rows.append({
+                    "row": rows_processed,
+                    "reason": "Operational report row was not matched to an existing client.",
+                })
+                continue
+
+            if enrichment_only and action == "review" and not client:
+                rows_failed += 1
+                failed_rows.append({
+                    "row": rows_processed,
+                    "reason": "Operational report row needs a matching master client.",
+                })
+                continue
+
             # Rows without enough identity data cannot be imported.
             if action == "failed":
                 rows_failed += 1
@@ -814,7 +997,7 @@ def import_file(
                     row=row,
                     source_system=source_system,
                     program_name=program_name,
-                    path=path,
+                    path=Path(display_file_name),
                     possible_client=client,
                     first_name=first_name,
                     last_name=last_name,
@@ -841,14 +1024,14 @@ def import_file(
                 nsv_client_id=client.nsv_client_id,
                 source_system=source_system,
                 source_client_id=source_client_id,
-                original_file=path.name,
+                original_file=display_file_name,
                 raw_data_json=json.dumps(row.to_dict(), default=str),
                 match_method=f"{match_method} ({jotform_status})" if jotform_status else match_method,
                 confidence_score=confidence,
             ))
 
             # Store additional source-specific details for the client profile.
-            add_source_details(db, row, client, source_system, program_name, path)
+            add_source_details(db, row, client, source_system, program_name, Path(display_file_name))
 
             # DOB-less rows are allowed into the database, but tagged so later
             # imports can fill the missing birthday when a match is found.
@@ -858,7 +1041,7 @@ def import_file(
                     client=client,
                     source_system=source_system,
                     program_name=program_name,
-                    path=path,
+                    path=Path(display_file_name),
                     reason="Needs DOB from another import",
                 )
 
@@ -884,7 +1067,7 @@ def import_file(
 
     # Save a final summary row for the import history.
     db.add(ImportLog(
-        file_name=path.name,
+        file_name=display_file_name,
         source_system=source_system,
         program_name=program_name,
         rows_processed=rows_processed,
@@ -896,7 +1079,7 @@ def import_file(
     db.commit()
 
     return {
-        "file_name": path.name,
+        "file_name": display_file_name,
         "source_system": source_system,
         "program_name": program_name,
         "rows_processed": rows_processed,

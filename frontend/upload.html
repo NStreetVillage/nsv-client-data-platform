@@ -232,6 +232,67 @@
       border-color: var(--accent);
     }
 
+    .upload-progress {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
+    }
+
+    .upload-step {
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .upload-step.active {
+      background: var(--accent-soft);
+      color: var(--text);
+      border-color: #8bc0c7;
+    }
+
+    .upload-step.done {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .duplicate-warning {
+      display: none;
+      margin-top: var(--space-lg);
+      padding: var(--space-lg);
+      border: 1px solid var(--warning-border);
+      border-radius: var(--radius-md);
+      background: var(--warning);
+    }
+
+    .duplicate-warning h3 {
+      margin: 0 0 var(--space-sm);
+    }
+
+    .upload-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+    }
+
+    .upload-summary-item {
+      padding: var(--space-md);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+
+    .upload-summary-item strong {
+      display: block;
+      font-size: 20px;
+    }
+
     input[type="file"] {
       display: none;
     }
@@ -453,6 +514,27 @@
       white-space: pre-wrap;
     }
 
+    .message[data-tone="working"] {
+      background: var(--accent-soft);
+      border: 1px solid #8bc0c7;
+    }
+
+    .message[data-tone="success"],
+    .message[data-tone="ready"] {
+      background: #edf8f1;
+      border: 1px solid #a8d5b5;
+    }
+
+    .message[data-tone="warning"] {
+      background: var(--warning);
+      border: 1px solid var(--warning-border);
+    }
+
+    .message[data-tone="error"] {
+      background: #fff1f1;
+      border: 1px solid #e7b4b4;
+    }
+
     /* Client list plus side profile panel.
        This area owns its own height so the table and profile card can scroll
        independently without the browser page cutting off the bottom of either. */
@@ -642,6 +724,26 @@
       font-weight: 800;
     }
 
+    .insight-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .insight-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .insight-list li:last-child {
+      border-bottom: none;
+    }
+
     .chip-list {
       display: flex;
       flex-wrap: wrap;
@@ -658,6 +760,66 @@
       padding: 6px 10px;
       font-size: 13px;
       font-weight: 700;
+    }
+
+    .chip.need {
+      border-color: #d7b28a;
+      background: #fff6e8;
+    }
+
+    .chip.documented {
+      border-color: #95b9a0;
+      background: #edf7ef;
+    }
+
+    .service-status-list {
+      display: grid;
+      gap: var(--space-sm);
+      margin-top: var(--space-sm);
+    }
+
+    .service-status-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--space-sm);
+      align-items: start;
+      padding-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .service-status-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .service-status-row strong {
+      display: block;
+    }
+
+    .service-status-row small {
+      display: block;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .status-pill {
+      border: 1px solid #cbdadb;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      background: var(--surface);
+    }
+
+    .status-pill.need {
+      border-color: #d7b28a;
+      background: #fff6e8;
+    }
+
+    .status-pill.documented {
+      border-color: #95b9a0;
+      background: #edf7ef;
     }
 
     .detail-list {
@@ -939,7 +1101,7 @@
       <section id="overview" class="tab-content active">
         <div class="header-card">
           <h2>Overview</h2>
-          <p>Centralize client data and program metrics from JotForm, HMIS, HTH, eCW, and planning sheets into one analytics-ready system.</p>
+          <p>Centralize client records and operational metrics from JotForm, HMIS, HTH, eCW, and planning sheets into one analytics-ready system.</p>
           <div class="banner"><strong>Current status:</strong> Upload/import prototype with client matching, metrics sheet storage, and placeholder tabs for future Tableau dashboards, AI insights, client search, and admin workflows.</div>
           <div class="quick-actions">
             <button class="primary" onclick="navigateToTab('upload')">Upload Client Data</button>
@@ -974,7 +1136,7 @@
           </div>
           <div class="workflow-card">
             <strong>4. Report</strong>
-            <p>Store planning metrics and prepare cleaned data for Tableau.</p>
+            <p>Store planning, occupancy, and operational report metrics for Tableau.</p>
             <button class="secondary" onclick="openMetricsPicker()">Upload Metrics</button>
           </div>
         </div>
@@ -991,11 +1153,11 @@
         </div>
 
         <div class="panel">
-          <h3>Program Metrics / Planning Sheets</h3>
-          <p>Store non-client metrics sheets such as H&W/FY planning files for overview reporting without adding them to client master records.</p>
+          <h3>Program Metrics / Operational Reports</h3>
+          <p>Use this for reports and rollups: planning sheets, occupancy reports, service plans, contacts, UIRs, and other operational exports. Metrics can also summarize client-linked details without turning every report row into a client record.</p>
           <input id="metricsFileInput" type="file" accept=".csv,.xlsx,.xls" />
           <div class="quick-actions">
-            <button class="primary" onclick="openMetricsPicker()">Upload Metrics Sheet</button>
+            <button class="primary" onclick="openMetricsPicker()">Upload Metrics / Report Sheet</button>
           </div>
           <div id="metricsMessage" class="message" style="display:none;"></div>
           <div id="metricsSummary"></div>
@@ -1006,10 +1168,17 @@
       <section id="upload" class="tab-content">
         <div class="header-card">
           <h2>Upload Data</h2>
-          <p>Upload a CSV or Excel report, preview it, map columns, and import records into the NSV database.</p>
+          <p>Use this for client roster files that should create, update, or enrich individual client profiles.</p>
         </div>
 
         <div class="panel">
+          <div class="upload-progress" aria-label="Upload progress">
+            <div id="uploadStepSelect" class="upload-step active">1. Select file</div>
+            <div id="uploadStepPreview" class="upload-step">2. Preview</div>
+            <div id="uploadStepMap" class="upload-step">3. Map columns</div>
+            <div id="uploadStepImport" class="upload-step">4. Import</div>
+          </div>
+
           <div id="dropZone" class="drop-zone">
             <strong>Drop CSV/Excel file here</strong>
             <p>or click to browse</p>
@@ -1035,6 +1204,16 @@
               <select id="programName">
                 <option value="">Select a source first</option>
               </select>
+            </div>
+          </div>
+
+          <div id="duplicateWarning" class="duplicate-warning">
+            <h3>This file was imported before</h3>
+            <p id="duplicateWarningText"></p>
+            <div id="duplicateImportHistory"></div>
+            <div class="quick-actions">
+              <button class="primary" id="confirmDuplicateButton">Import Anyway</button>
+              <button class="secondary" id="declineDuplicateButton">Cancel This Upload</button>
             </div>
           </div>
 
@@ -1366,7 +1545,18 @@
       importButton: $("importButton"),
       message: $("message"),
       programName: $("programName"),
-      sourceSystem: $("sourceSystem")
+      sourceSystem: $("sourceSystem"),
+      duplicateWarning: $("duplicateWarning"),
+      duplicateWarningText: $("duplicateWarningText"),
+      duplicateImportHistory: $("duplicateImportHistory"),
+      confirmDuplicateButton: $("confirmDuplicateButton"),
+      declineDuplicateButton: $("declineDuplicateButton"),
+      steps: {
+        select: $("uploadStepSelect"),
+        preview: $("uploadStepPreview"),
+        map: $("uploadStepMap"),
+        import: $("uploadStepImport")
+      }
     },
     reviews: {
       table: $("reviewsTable"),
@@ -1540,6 +1730,23 @@
     }
   }
 
+  // Renders a compact insight list such as top providers or service categories.
+  function renderInsightList(title, items, emptyText = "No data yet.") {
+    const rows = (items || []).map(item => `
+      <li>
+        <span>${escapeHtml(item.label ?? "")}</span>
+        <strong>${escapeHtml(item.count ?? item.value ?? 0)}</strong>
+      </li>
+    `).join("");
+
+    return `
+      <div class="profile-card">
+        <h3>${escapeHtml(title)}</h3>
+        ${rows ? `<ul class="insight-list">${rows}</ul>` : `<p>${escapeHtml(emptyText)}</p>`}
+      </div>
+    `;
+  }
+
   // Loads the metrics/planning sheet summary shown on the Overview tab.
   async function loadMetricsSummary() {
     const summary = dom.metrics.summary;
@@ -1548,27 +1755,35 @@
     try {
       const response = await fetch("/metrics/summary");
       const payload = await response.json();
+      const clientNeeds = payload.client_needs_summary || {};
+      const hasClientNeeds = Boolean(clientNeeds.clients_with_needs);
 
-      // Empty state when no metrics sheets have been imported yet.
-      if (!payload.total_metrics) {
-        summary.innerHTML = "<p>No metrics sheets have been imported yet.</p>";
+      // Empty state when neither metrics sheets nor operational source details exist.
+      if (!payload.total_metrics && !payload.has_operational_data && !hasClientNeeds) {
+        summary.innerHTML = "<p>No metrics or operational report data have been imported yet.</p>";
         return;
       }
+
+      const insights = payload.operational_insights || {};
 
       // Start with high-level summary text.
       let html = `
         <p><strong>Latest file:</strong> ${escapeHtml(payload.latest_file ?? "")}</p>
         <p><strong>Programs covered:</strong> ${escapeHtml(payload.program_count)} (${escapeHtml((payload.programs || []).join(", "))})</p>
+        <p><strong>Clients with open needs:</strong> ${escapeHtml(clientNeeds.clients_with_needs ?? 0)}</p>
+        <div class="profile-grid">
+          ${renderInsightList("Open Client Needs", clientNeeds.top_needs, "No open needs detected from client profiles.")}
+          ${renderInsightList("Service Gaps", clientNeeds.service_gaps, "No requested service gaps detected.")}
+          ${renderInsightList("Health / Behavioral Health Gaps", clientNeeds.health_gaps, "No health gaps detected.")}
+          ${renderInsightList("Case Workers", insights.case_workers)}
+          ${renderInsightList("Healthcare / Service Providers", insights.providers)}
+          ${renderInsightList("Services and Supports", insights.services)}
+          ${renderInsightList("UIR Categories", insights.uir_categories)}
+          ${renderInsightList("Occupancy Snapshot", payload.occupancy_summary, "No occupancy reports imported yet.")}
+        </div>
       `;
 
-      // Add a recent metrics table when the backend returns sample rows.
-      if ((payload.recent_metrics || []).length) {
-        html += "<table><thead><tr><th>Program</th><th>Metric</th><th>Target</th><th>Method</th></tr></thead><tbody>";
-        payload.recent_metrics.forEach(metric => {
-          html += `<tr><td>${escapeHtml(metric.program ?? "")}</td><td>${escapeHtml(metric.metric ?? "")}</td><td>${escapeHtml(metric.target ?? "")}</td><td>${escapeHtml(metric.method ?? "")}</td></tr>`;
-        });
-        html += "</tbody></table>";
-      }
+
 
       summary.innerHTML = html;
     } catch {
@@ -1604,9 +1819,9 @@
 
     const preview = await previewResponse.json();
 
-    // Metrics files must have Program, Target, Metric, and Method columns.
+    // Metrics imports accept planning sheets and supported aggregate reports.
     if (preview.file_type !== "metrics") {
-      metricsMessage.textContent = "This does not look like a metrics/planning sheet. Use Upload Data for client files.";
+      metricsMessage.textContent = "This does not look like a supported metrics/reporting sheet. Use Upload Data for client files.";
       return;
     }
 
@@ -1846,12 +2061,20 @@
     "Benefits",
     "Clothing",
     "Laundry",
+    "Classes",
+    "Class",
     "Showers",
     "Shower",
     "Meals",
     "Mail",
     "Other"
   ];
+
+  const serviceLabelAliases = {
+    Meal: "Meals",
+    Showers: "Shower",
+    Class: "Classes"
+  };
 
   // Splits combined service text from source forms into readable service chips.
   function splitServiceValue(value) {
@@ -1868,7 +2091,7 @@
     return pieces.flatMap(piece => {
       const lowerPiece = piece.toLowerCase();
       const matches = knownServiceLabels
-        .map(label => ({ label: label === "Showers" ? "Shower" : label, index: lowerPiece.indexOf(label.toLowerCase()) }))
+        .map(label => ({ label: serviceLabelAliases[label] || label, index: lowerPiece.indexOf(label.toLowerCase()) }))
         .filter(match => match.index >= 0)
         .sort((a, b) => a.index - b.index || b.label.length - a.label.length);
 
@@ -1966,6 +2189,62 @@
     return values.map(value => `<span class="chip">${escapeHtml(value)}</span>`).join("");
   }
 
+  // Renders counted snapshot items returned by the backend service snapshot.
+  function renderSnapshotChips(items, className = "") {
+    if (!items.length) return `<span class="chip">None recorded</span>`;
+    return items.map(item => {
+      const countText = item.count > 1 ? ` - ${item.count}` : "";
+      return `<span class="chip ${className}">${escapeHtml(item.label + countText)}</span>`;
+    }).join("");
+  }
+
+  // Shows whether requested services already have matching documented activity.
+  function renderServiceStatusRows(items) {
+    if (!items.length) {
+      return `<p class="profile-subtitle">No requested services have been recorded yet.</p>`;
+    }
+
+    return `
+      <div class="service-status-list">
+        ${items.map(item => {
+          const isDocumented = item.status === "Documented";
+          const sources = [
+            item.requested_sources?.length ? `Requested: ${item.requested_sources.join(", ")}` : "",
+            item.recorded_sources?.length ? `Documented: ${item.recorded_sources.join(", ")}` : ""
+          ].filter(Boolean).join(" | ");
+
+          return `
+            <div class="service-status-row">
+              <div>
+                <strong>${escapeHtml(item.label)}</strong>
+                <small>${escapeHtml(sources || "Source details available after import.")}</small>
+              </div>
+              <span class="status-pill ${isDocumented ? "documented" : "need"}">${escapeHtml(item.status)}</span>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  // Renders action-oriented needs inferred from requested services and gaps.
+  function renderNeeds(needs) {
+    if (!needs.length) return `<p class="profile-subtitle">No unresolved needs detected from imported records.</p>`;
+    return `
+      <div class="service-status-list">
+        ${needs.map(need => `
+          <div class="service-status-row">
+            <div>
+              <strong>${escapeHtml(need.label)}</strong>
+              <small>${escapeHtml(need.reason || "")}</small>
+            </div>
+            <span class="status-pill need">Follow up</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
   // Renders label/value rows inside profile cards.
   function renderDetailRows(rows) {
     return rows
@@ -1994,20 +2273,22 @@
     profile.innerHTML = "<p>Loading client profile...</p>";
 
     try {
-      // Load the master client, program records, and source details at the same time.
-      const [clientResponse, programsResponse, detailsResponse] = await Promise.all([
+      // Load the master client, raw profile facts, and unified service snapshot together.
+      const [clientResponse, programsResponse, detailsResponse, snapshotResponse] = await Promise.all([
         fetch(`/clients/${encodeURIComponent(nsvClientId)}`),
         fetch(`/clients/${encodeURIComponent(nsvClientId)}/programs`),
-        fetch(`/clients/${encodeURIComponent(nsvClientId)}/details`)
+        fetch(`/clients/${encodeURIComponent(nsvClientId)}/details`),
+        fetch(`/clients/${encodeURIComponent(nsvClientId)}/service-snapshot`)
       ]);
 
       const client = await clientResponse.json();
       const programs = await programsResponse.json();
       const detailPayload = await detailsResponse.json();
+      const snapshot = snapshotResponse.ok ? await snapshotResponse.json() : {};
       const sources = detailPayload.sources || [];
       const details = detailPayload.details || [];
 
-      const profileModel = buildClientProfileModel({ client, programs, sources, details });
+      const profileModel = buildClientProfileModel({ client, programs, sources, details, snapshot });
       profile.innerHTML = renderClientProfile(profileModel);
     } catch {
       profile.innerHTML = "<p>Unable to load client profile. Make sure the backend and database are running.</p>";
@@ -2015,7 +2296,7 @@
   }
 
   // Converts raw client/detail rows into the grouped values used by the profile cards.
-  function buildClientProfileModel({ client, programs, sources, details }) {
+  function buildClientProfileModel({ client, programs, sources, details, snapshot }) {
     const programCounts = countBy(programs, program => program.program_name);
     const sourceCounts = countBy(sources, source => source.source_system);
     const serviceCounts = countBy(collectServiceValues(details), service => service);
@@ -2023,7 +2304,18 @@
     const nsvPrograms = getDetailValues(details, "nsv_program");
     const keyInfoChips = buildKeyInfoChips(details);
     const additionalInfoRows = buildAdditionalInfoRows(details);
-    const primaryProgram = nsvPrograms[0] || (programCounts[0] ? programCounts[0][0] : "No program recorded");
+    const snapshotCounts = snapshot.snapshot_counts || {};
+    const snapshotPrograms = snapshot.programs || [];
+    const recordedServices = snapshot.recorded_services || [];
+    const requestedServices = snapshot.requested_services || [];
+    const serviceStatus = snapshot.service_status || [];
+    const serviceNeeds = snapshot.needs || [];
+    const healthSnapshot = snapshot.health || {};
+    const documentedHealth = healthSnapshot.documented || [];
+    const requestedHealth = healthSnapshot.requested || [];
+    const healthStatus = healthSnapshot.status || [];
+    const careTeam = snapshot.care_team || [];
+    const primaryProgram = (snapshotPrograms[0] && snapshotPrograms[0].label) || nsvPrograms[0] || (programCounts[0] ? programCounts[0][0] : "No program recorded");
     const primaryProgramContext = nsvPrograms.length
       ? "NSV program from source details"
       : "Imported program record";
@@ -2035,6 +2327,18 @@
       programCounts,
       sourceCounts,
       serviceCounts,
+      snapshot,
+      snapshotCounts,
+      snapshotPrograms,
+      recordedServices,
+      requestedServices,
+      serviceStatus,
+      serviceNeeds,
+      healthSnapshot,
+      documentedHealth,
+      requestedHealth,
+      healthStatus,
+      careTeam,
       keyInfoChips,
       additionalInfoRows,
       primaryProgram,
@@ -2067,6 +2371,18 @@
       programCounts,
       sourceCounts,
       serviceCounts,
+      snapshot,
+      snapshotCounts,
+      snapshotPrograms,
+      recordedServices,
+      requestedServices,
+      serviceStatus,
+      serviceNeeds,
+      healthSnapshot,
+      documentedHealth,
+      requestedHealth,
+      healthStatus,
+      careTeam,
       keyInfoChips,
       additionalInfoRows,
       primaryProgram,
@@ -2087,21 +2403,22 @@
 
       <div class="profile-tabs">
         <button class="profile-tab-button active" data-profile-tab="summary" onclick="switchClientProfileTab('summary')">Summary</button>
+        <button class="profile-tab-button" data-profile-tab="services" onclick="switchClientProfileTab('services')">Services</button>
         <button class="profile-tab-button" data-profile-tab="additional" onclick="switchClientProfileTab('additional')">Additional Info</button>
       </div>
 
       <div class="profile-tab-panel active" data-profile-panel="summary">
         <div class="profile-grid">
           <div class="profile-card large">
-            <h3>NSV Program</h3>
-            <div class="primary-value">${escapeHtml(primaryProgram)}</div>
-            <p class="profile-subtitle">${escapeHtml(primaryProgramContext)}</p>
-            <div class="chip-list">${renderChips(programCounts.map(([programName, count]) => `${programName}${count > 1 ? ` - ${count} records` : ""}`))}</div>
+            <h3>Service Snapshot</h3>
+            <div class="primary-value">${escapeHtml(snapshotCounts.recorded_services || 0)} documented</div>
+            <p class="profile-subtitle">${escapeHtml(snapshotCounts.service_gaps || 0)} service gap${snapshotCounts.service_gaps === 1 ? "" : "s"} and ${escapeHtml(snapshotCounts.health_gaps || 0)} health gap${snapshotCounts.health_gaps === 1 ? "" : "s"} from imported records</p>
+            <div class="chip-list">${renderSnapshotChips(serviceNeeds, "need")}</div>
           </div>
 
           <div class="profile-card">
             <h3>Interactions</h3>
-            <div class="metric-value">${escapeHtml(programs.length || sources.length || 0)}</div>
+            <div class="metric-value">${escapeHtml(snapshotCounts.interactions || programs.length || sources.length || 0)}</div>
             <p class="profile-subtitle">Imported activity records</p>
           </div>
 
@@ -2109,6 +2426,29 @@
             <h3>Sources</h3>
             <div class="metric-value">${escapeHtml(sourceCounts.length)}</div>
             <div class="chip-list">${renderChips(sourceCounts.map(([source]) => source))}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>NSV Programs</h3>
+            <div class="primary-value">${escapeHtml(primaryProgram)}</div>
+            <p class="profile-subtitle">${escapeHtml(primaryProgramContext)}</p>
+            <div class="chip-list">${renderSnapshotChips(snapshotPrograms)}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Services Already Documented</h3>
+            <div class="chip-list">${renderSnapshotChips(recordedServices, "documented")}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Health / Behavioral Health</h3>
+            <p class="profile-subtitle">Health categories documented from eCW/HMIS/HTH/JotForm source details.</p>
+            <div class="chip-list">${renderSnapshotChips(documentedHealth, "documented")}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Needs Follow-Up</h3>
+            ${renderNeeds(serviceNeeds)}
           </div>
 
           <div class="profile-card wide">
@@ -2122,24 +2462,68 @@
           </div>
 
           <div class="profile-card wide">
-            <h3>Services Requested</h3>
-            <div class="chip-list">${renderChips(serviceCounts.map(([service, count]) => `${service}${count > 1 ? ` - ${count}` : ""}`))}</div>
-          </div>
-
-          <div class="profile-card wide">
-            <h3>Client Details</h3>
-            <div class="detail-list">${renderDetailRows(personalRows)}</div>
-          </div>
-
-          <div class="profile-card wide">
             <h3>Source Summary</h3>
             <div class="detail-list">${renderDetailRows(sourceRows)}</div>
           </div>
         </div>
       </div>
 
+      <div class="profile-tab-panel" data-profile-panel="services">
+        <div class="profile-grid">
+          <div class="profile-card wide">
+            <h3>Requested Services vs. Documented Services</h3>
+            ${renderServiceStatusRows(serviceStatus)}
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Health Needs vs. Documented Health Activity</h3>
+            ${renderServiceStatusRows(healthStatus)}
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Health Services Documented</h3>
+            <div class="chip-list">${renderSnapshotChips(documentedHealth, "documented")}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Health Needs Requested</h3>
+            <div class="chip-list">${renderSnapshotChips(requestedHealth, "need")}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Services Already Documented</h3>
+            <div class="chip-list">${renderSnapshotChips(recordedServices, "documented")}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Requested / Future Service Interest</h3>
+            <div class="chip-list">${renderSnapshotChips(requestedServices, "need")}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Care Team / Providers</h3>
+            <div class="chip-list">${renderSnapshotChips(careTeam)}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Housing</h3>
+            <div class="detail-list">${renderDetailRows((snapshot.housing || []).map(row => ({ label: row.label, value: row.value })))}</div>
+          </div>
+
+          <div class="profile-card wide">
+            <h3>Eligibility / Access</h3>
+            <div class="detail-list">${renderDetailRows((snapshot.eligibility || []).map(row => ({ label: row.label, value: row.value })))}</div>
+          </div>
+        </div>
+      </div>
+
       <div class="profile-tab-panel" data-profile-panel="additional">
         <div class="profile-grid">
+          <div class="profile-card wide">
+            <h3>Client Details</h3>
+            <div class="detail-list">${renderDetailRows(personalRows)}</div>
+          </div>
+
           <div class="profile-card wide">
             <h3>Additional Info</h3>
             <div class="detail-list">${renderDetailRows(additionalInfoRows)}</div>
@@ -2229,6 +2613,9 @@
         ? `${possibleClient.first_name ?? ""} ${possibleClient.last_name ?? ""}`.trim()
         : "No suggested existing profile";
       const recommendedLabel = review.recommended_action === "accept_match"
+        ? "Recommended match"
+        : "Recommended new profile";
+      const recommendedButtonLabel = review.recommended_action === "accept_match"
         ? "Accept suggested match"
         : "Create partial profile";
       const recommendationHelp = review.recommended_action === "accept_match"
@@ -2265,8 +2652,7 @@
         <td>
           <div class="review-actions">
             <span class="recommendation-pill" title="${escapeHtml(recommendationHelp)}">${escapeHtml(recommendedLabel)}</span>
-            ${possibleClient ? `<button type="button" class="secondary" data-review-id="${escapeHtml(review.review_id)}" data-review-action="accept_match" data-target-id="${escapeHtml(targetId)}">Same person</button>` : ""}
-            <button type="button" class="secondary" data-review-id="${escapeHtml(review.review_id)}" data-review-action="${escapeHtml(review.recommended_action)}" data-target-id="${escapeHtml(targetId)}">Do recommendation</button>
+            <button type="button" class="secondary" data-review-id="${escapeHtml(review.review_id)}" data-review-action="${escapeHtml(review.recommended_action)}" data-target-id="${escapeHtml(targetId)}">${escapeHtml(recommendedButtonLabel)}</button>
             <button type="button" class="secondary" data-review-id="${escapeHtml(review.review_id)}" data-review-action="dismiss" data-target-id="">Dismiss</button>
           </div>
         </td>
@@ -2567,6 +2953,8 @@
 
   // The backend returns this after previewing a file; the import step sends it back.
   let currentUploadId = null;
+  let currentUploadPreview = null;
+  let duplicateImportConfirmed = false;
 
   // These are the system fields a spreadsheet column can map into.
   const systemFields = [
@@ -2614,44 +3002,85 @@
     if (file) uploadPreview(file);
   });
 
+  dom.upload.confirmDuplicateButton.addEventListener("click", () => {
+    duplicateImportConfirmed = true;
+    dom.upload.duplicateWarning.style.display = "none";
+    setUploadStage("map");
+    showMessage("Duplicate confirmed. Review the preview and mapping, then import when ready.", "ready");
+  });
+
+  dom.upload.declineDuplicateButton.addEventListener("click", () => {
+    resetUploadFlow("Duplicate upload cancelled. Choose a different file when ready.");
+  });
+
   // First step of client import: upload the file and ask the backend for a preview.
   async function uploadPreview(file) {
-    showMessage("Uploading and reading preview...");
+    resetUploadFlow();
+    setUploadStage("preview");
+    showMessage(`Uploading ${file.name} and preparing preview...`, "working");
 
-    // FormData sends the selected CSV/Excel file as multipart form data.
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
+      // FormData sends the selected CSV/Excel file as multipart form data.
+      const formData = new FormData();
+      formData.append("file", file);
 
-    // The backend saves the file and returns columns plus the first preview rows.
-    const response = await fetch("/upload/preview", {
-      method: "POST",
-      body: formData
-    });
+      // The backend saves the file and returns columns plus the first preview rows.
+      const response = await fetch("/upload/preview", {
+        method: "POST",
+        body: formData
+      });
 
-    if (!response.ok) {
-      showMessage("Upload failed. Make sure the FastAPI backend is running.");
-      return;
+      if (!response.ok) {
+        const errorText = await response.text();
+        setUploadStage("select");
+        showMessage(`Upload failed. ${errorText || "Make sure the FastAPI backend is running."}`, "error");
+        return;
+      }
+
+      const data = await response.json();
+      if (!data.columns || !data.rows) {
+        throw new Error("The backend did not return preview columns and rows.");
+      }
+
+      // Save the upload ID so the later import request knows which saved file to import.
+      currentUploadId = data.upload_id;
+      currentUploadPreview = data;
+      duplicateImportConfirmed = !data.duplicate_file;
+
+      // Show both the raw preview and the column mapping controls.
+      renderPreview(data);
+      renderMapping(data.columns);
+
+      previewSection.style.display = "block";
+      mappingSection.style.display = "block";
+      setUploadStage(data.duplicate_file ? "duplicate" : "map");
+      previewSection.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      if (data.duplicate_file) {
+        renderDuplicateWarning(data);
+        showMessage("Preview is ready, but this filename has already been imported. Confirm before importing again.", "warning");
+      } else if (data.file_type === "metrics") {
+        showMessage("Preview loaded. This looks like a metrics/report file, so importing here will add it to Metrics rather than the client review queue.", "ready");
+      } else {
+        showMessage("Preview loaded. Check the columns, adjust mapping if needed, then import.", "ready");
+      }
+    } catch (error) {
+      setUploadStage("select");
+      showMessage(`Upload preview failed: ${error.message}`, "error");
     }
-
-    const data = await response.json();
-
-    // Save the upload ID so the later import request knows which saved file to import.
-    currentUploadId = data.upload_id;
-
-    // Show both the raw preview and the column mapping controls.
-    renderPreview(data);
-    renderMapping(data.columns);
-
-    previewSection.style.display = "block";
-    mappingSection.style.display = "block";
-    showMessage("File preview loaded. Map the columns, then import.");
   }
 
   // Displays the uploaded file name, row count, and first preview rows.
   function renderPreview(data) {
+    const duplicateText = data.duplicate_file ? "Previously imported" : "New file";
+    const fileTypeText = data.file_type === "metrics" ? "Metrics / report" : "Client records";
     fileInfo.innerHTML = `
-      <p><strong>File:</strong> ${escapeHtml(data.file_name)}</p>
-      <p><strong>Total rows:</strong> ${escapeHtml(data.row_count)}</p>
+      <div class="upload-summary-grid">
+        <div class="upload-summary-item"><strong>${escapeHtml(data.original_file_name || data.file_name)}</strong>File</div>
+        <div class="upload-summary-item"><strong>${escapeHtml(data.row_count)}</strong>Total rows</div>
+        <div class="upload-summary-item"><strong>${escapeHtml(duplicateText)}</strong>Import status</div>
+        <div class="upload-summary-item"><strong>${escapeHtml(fileTypeText)}</strong>Detected use</div>
+      </div>
     `;
 
     if (data.rows.length === 0) {
@@ -2660,6 +3089,67 @@
     }
 
     previewTable.innerHTML = renderPreviewTable(data);
+  }
+
+  // Shows prior imports for a duplicate filename and asks the user to decide.
+  function renderDuplicateWarning(data) {
+    const previousImports = data.previous_imports || [];
+    dom.upload.duplicateWarning.style.display = "block";
+    dom.upload.duplicateWarningText.textContent =
+      `${data.original_file_name || data.file_name} has already been imported ${previousImports.length} time${previousImports.length === 1 ? "" : "s"}. Importing again may duplicate client source rows, enrollments, or review records.`;
+
+    if (!previousImports.length) {
+      dom.upload.duplicateImportHistory.innerHTML = "";
+      return;
+    }
+
+    const rows = previousImports.map(item => `
+      <tr>
+        <td>${escapeHtml(item.imported_at ?? "N/A")}</td>
+        <td>${escapeHtml(item.source_system ?? "N/A")}</td>
+        <td>${escapeHtml(item.program_name ?? "N/A")}</td>
+        <td>${escapeHtml(item.rows_processed ?? 0)}</td>
+        <td>${escapeHtml(item.rows_created ?? 0)}</td>
+        <td>${escapeHtml(item.rows_matched ?? 0)}</td>
+        <td>${escapeHtml(item.rows_review ?? 0)}</td>
+      </tr>
+    `).join("");
+
+    dom.upload.duplicateImportHistory.innerHTML = `
+      <table>
+        <thead><tr><th>Imported At</th><th>Source</th><th>Program</th><th>Rows</th><th>Created</th><th>Matched</th><th>Review</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  // Resets upload-only state when the user chooses a new file or cancels a duplicate.
+  function resetUploadFlow(messageText = "") {
+    currentUploadId = null;
+    currentUploadPreview = null;
+    duplicateImportConfirmed = false;
+    previewSection.style.display = "none";
+    mappingSection.style.display = "none";
+    dom.upload.duplicateWarning.style.display = "none";
+    fileInfo.innerHTML = "";
+    previewTable.innerHTML = "";
+    mappingForm.innerHTML = "";
+    fileInput.value = "";
+    setUploadStage("select");
+    if (messageText) showMessage(messageText, "ready");
+  }
+
+  // Keeps the four upload steps visually synced with the current workflow stage.
+  function setUploadStage(stage) {
+    const order = ["select", "preview", "map", "import"];
+    const activeIndex = stage === "complete" ? order.length : stage === "duplicate" ? 2 : order.indexOf(stage);
+
+    order.forEach((stepName, index) => {
+      const step = dom.upload.steps[stepName];
+      if (!step) return;
+      step.classList.toggle("done", activeIndex > index);
+      step.classList.toggle("active", activeIndex === index && stage !== "complete");
+    });
   }
 
   // Builds the preview table using the columns and rows returned by the backend.
@@ -2739,53 +3229,81 @@
 
     // A previewed upload is required before importing.
     if (!currentUploadId) {
-      showMessage("Please upload a file first.");
+      setUploadStage("select");
+      showMessage("Please upload a file first.", "error");
+      return;
+    }
+
+    if (currentUploadPreview?.duplicate_file && !duplicateImportConfirmed) {
+      dom.upload.duplicateWarning.style.display = "block";
+      setUploadStage("duplicate");
+      showMessage("This looks like a duplicate file. Confirm or cancel before importing.", "warning");
       return;
     }
 
     // Source and program are required context for every imported row.
     if (!sourceSystem || !programName) {
-      showMessage("Please enter both source system and program name.");
+      setUploadStage("map");
+      showMessage("Please enter both source system and program name.", "error");
       return;
     }
 
     const columnMapping = collectColumnMapping();
 
-    showMessage("Importing data...");
+    setUploadStage("import");
+    showMessage("Importing records into the database...", "working");
 
-    // Tell the backend to import the saved upload using the selected mappings.
-    const response = await fetch("/upload/import", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        upload_id: currentUploadId,
-        source_system: sourceSystem,
-        program_name: programName,
-        column_mapping: columnMapping
-      })
-    });
+    try {
+      // Tell the backend to import the saved upload using the selected mappings.
+      const response = await fetch("/upload/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          upload_id: currentUploadId,
+          source_system: sourceSystem,
+          program_name: programName,
+          original_file_name: currentUploadPreview?.original_file_name || currentUploadPreview?.file_name || "",
+          column_mapping: columnMapping
+        })
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (!response.ok) {
-      showMessage("Import failed: " + JSON.stringify(result, null, 2));
-      return;
+      if (!response.ok) {
+        setUploadStage("map");
+        showMessage("Import failed: " + JSON.stringify(result, null, 2), "error");
+        return;
+      }
+
+      // Show the import summary returned by the backend.
+      setUploadStage("complete");
+      if (result.import_mode === "metrics") {
+        showImportCompleteMessage(
+          `Metrics/report import complete.\n\n` +
+          `This file was recognized as an operational report, so it was added to Metrics instead of Client Master Records.\n\n` +
+          `Rows processed: ${result.rows_processed}\n` +
+          `Metric rows created: ${result.rows_imported}`
+        );
+      } else {
+        showImportCompleteMessage(
+          `Client import complete.\n\n` +
+          `Rows processed: ${result.rows_processed}\n` +
+          `New clients created: ${result.rows_created}\n` +
+          `Existing clients matched: ${result.rows_matched}\n` +
+          `Rows needing review: ${result.rows_review}\n` +
+          `Rows failed: ${result.rows_failed}`
+        );
+      }
+
+      // Refresh overview counts so the dashboard reflects the import.
+      loadStats();
+      loadMetricsSummary();
+    } catch (error) {
+      setUploadStage("map");
+      showMessage(`Import failed: ${error.message}`, "error");
     }
-
-    // Show the import summary returned by the backend.
-    showImportCompleteMessage(
-      `Import complete.\n\n` +
-      `Rows processed: ${result.rows_processed}\n` +
-      `New clients created: ${result.rows_created}\n` +
-      `Existing clients matched: ${result.rows_matched}\n` +
-      `Rows needing review: ${result.rows_review}\n` +
-      `Rows failed: ${result.rows_failed}`
-    );
-
-    // Refresh overview counts so the dashboard reflects the import.
-    loadStats();
   });
 
   // Converts the mapping dropdown selections into the backend import format.
@@ -2803,14 +3321,16 @@
   }
 
   // Displays status text in the Upload Data tab message box.
-  function showMessage(text) {
+  function showMessage(text, tone = "info") {
     message.style.display = "block";
+    message.dataset.tone = tone;
     message.textContent = text;
   }
 
   // Displays an import success message with direct next-step buttons.
   function showImportCompleteMessage(text) {
     message.style.display = "block";
+    message.dataset.tone = "success";
     message.innerHTML = `
       <div>${escapeHtml(text)}</div>
       <div class="quick-actions">

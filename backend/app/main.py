@@ -19,6 +19,7 @@ import pandas as pd
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from .client_snapshot import build_client_needs_summary, build_client_service_snapshot
 from .database import SessionLocal
 from .models import Client, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch, ProgramMetric
 from .schemas import ClientOut
@@ -31,9 +32,12 @@ from .importer import (
     extract_status,
     get_or_create_program,
     import_file,
+    load_file,
+    normalize_import_columns,
     preview_file,
     update_client_from_row,
 )
+from .import_routing import ImportRoute, classify_upload_dataframe
 from .metrics import get_metrics_summary, import_metrics_file
 from .utils import parse_date_candidates
 
@@ -50,6 +54,7 @@ class ImportRequest(BaseModel):
     upload_id: str
     source_system: str = ""
     program_name: str = ""
+    original_file_name: Optional[str] = None
     column_mapping: Dict[str, str] = {}
 
 
@@ -255,6 +260,16 @@ def get_client_details(nsv_client_id: str, db: Session = Depends(get_db)):
     }
 
 
+@app.get("/clients/{nsv_client_id}/service-snapshot")
+def get_client_service_snapshot(nsv_client_id: str, db: Session = Depends(get_db)):
+    """Return a MyChart-style service snapshot for one client profile."""
+
+    snapshot = build_client_service_snapshot(db, nsv_client_id)
+    if not snapshot:
+        raise HTTPException(status_code=404, detail="Client not found.")
+    return snapshot
+
+
 @app.get("/programs")
 def get_programs(db: Session = Depends(get_db)):
     """Return all known programs."""
@@ -405,7 +420,7 @@ def attach_review_row_to_client(db: Session, review: PotentialMatch, client: Cli
 
 
 @app.post("/upload/preview")
-async def upload_preview(file: UploadFile = File(...)):
+async def upload_preview(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Save an uploaded CSV/Excel file and return preview rows/columns."""
 
     extension = Path(file.filename).suffix.lower()
@@ -420,7 +435,30 @@ async def upload_preview(file: UploadFile = File(...)):
     saved_path.write_bytes(content)
 
     preview = preview_file(str(saved_path), max_rows=10)
+    previous_imports = (
+        db.query(ImportLog)
+        .filter(ImportLog.file_name == file.filename)
+        .order_by(ImportLog.imported_at.desc(), ImportLog.import_id.desc())
+        .limit(5)
+        .all()
+    )
     preview["upload_id"] = upload_id
+    preview["original_file_name"] = file.filename
+    preview["duplicate_file"] = len(previous_imports) > 0
+    preview["previous_imports"] = [
+        {
+            "import_id": item.import_id,
+            "source_system": item.source_system,
+            "program_name": item.program_name,
+            "rows_processed": item.rows_processed,
+            "rows_created": item.rows_created,
+            "rows_matched": item.rows_matched,
+            "rows_review": item.rows_review,
+            "rows_failed": item.rows_failed,
+            "imported_at": str(item.imported_at) if item.imported_at else None,
+        }
+        for item in previous_imports
+    ]
     return preview
 
 
@@ -435,11 +473,36 @@ def upload_import(request: ImportRequest, db: Session = Depends(get_db)):
 
     file_path = matching_files[0]
 
+    # Classify the upload once, then send it to the correct ingestion path.
+    # This keeps client identity imports separate from metrics/report imports.
+    preview_df = normalize_import_columns(load_file(file_path, allow_metrics=True), request.column_mapping)
+    route_decision = classify_upload_dataframe(preview_df)
+
+    if route_decision.route == ImportRoute.METRICS:
+        metrics_result = import_metrics_file(
+            db=db,
+            file_path=str(file_path),
+            original_file_name=request.original_file_name,
+        )
+        return {
+            **metrics_result,
+            "import_mode": "metrics",
+            "import_route_reason": route_decision.reason,
+            "source_system": request.source_system,
+            "program_name": request.program_name,
+            "rows_created": 0,
+            "rows_matched": 0,
+            "rows_review": 0,
+            "rows_failed": 0,
+            "failed_rows": [],
+        }
+
     result = import_file(
         db=db,
         file_path=str(file_path),
         source_system=request.source_system,
         program_name=request.program_name,
+        original_file_name=request.original_file_name,
         column_mapping=request.column_mapping,
     )
 
@@ -456,7 +519,11 @@ def metrics_import(request: ImportRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Uploaded file not found.")
 
     try:
-        return import_metrics_file(db=db, file_path=str(matching_files[0]))
+        return import_metrics_file(
+            db=db,
+            file_path=str(matching_files[0]),
+            original_file_name=request.original_file_name,
+        )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -465,7 +532,9 @@ def metrics_import(request: ImportRequest, db: Session = Depends(get_db)):
 def metrics_summary(db: Session = Depends(get_db)):
     """Return a compact summary of imported metrics rows."""
 
-    return get_metrics_summary(db)
+    summary = get_metrics_summary(db)
+    summary["client_needs_summary"] = build_client_needs_summary(db)
+    return summary
 
 
 def serialize_review(review: PotentialMatch, possible_client: Optional[Client] = None):
