@@ -22,7 +22,14 @@ from enum import Enum
 
 import pandas as pd
 
-from .importer import is_enrichment_only_layout, is_supported_metrics_layout
+from .importer import (
+    is_client_identity_layout,
+    is_enrichment_only_layout,
+    is_metrics_layout,
+    is_occupancy_report_layout,
+    is_operational_metrics_layout,
+    is_supported_metrics_layout,
+)
 
 
 class ImportRoute(str, Enum):
@@ -45,13 +52,32 @@ class ImportRouteDecision:
 def classify_upload_dataframe(df: pd.DataFrame) -> ImportRouteDecision:
     """Choose the import destination for a normalized uploaded dataframe."""
 
+    explicit_metrics_layout = is_metrics_layout(df) or is_occupancy_report_layout(df)
+    operational_metrics_layout = is_operational_metrics_layout(df)
     metrics_layout = is_supported_metrics_layout(df)
     enrichment_only = is_enrichment_only_layout(df)
+    client_identity = is_client_identity_layout(df)
 
-    if metrics_layout:
+    if explicit_metrics_layout:
         return ImportRouteDecision(
             route=ImportRoute.METRICS,
             reason="recognized metrics/report layout",
+            is_supported_metrics_layout=True,
+            is_enrichment_only_layout=enrichment_only,
+        )
+
+    if client_identity and not enrichment_only:
+        return ImportRouteDecision(
+            route=ImportRoute.CLIENT,
+            reason="client identity import",
+            is_supported_metrics_layout=metrics_layout,
+            is_enrichment_only_layout=False,
+        )
+
+    if operational_metrics_layout:
+        return ImportRouteDecision(
+            route=ImportRoute.METRICS,
+            reason="operational report layout",
             is_supported_metrics_layout=True,
             is_enrichment_only_layout=enrichment_only,
         )

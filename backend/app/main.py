@@ -21,10 +21,11 @@ from sqlalchemy.orm import Session
 
 from .client_snapshot import build_client_needs_summary, build_client_service_snapshot
 from .database import SessionLocal
-from .models import Client, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch, ProgramMetric
+from .models import Client, ClientAlias, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch, ProgramMetric
 from .schemas import ClientOut
 from .importer import (
     add_identity_enrichment_detail,
+    add_client_alias,
     add_source_details,
     create_client,
     extract_enrollment_dates,
@@ -39,7 +40,7 @@ from .importer import (
 )
 from .import_routing import ImportRoute, classify_upload_dataframe
 from .metrics import get_metrics_summary, import_metrics_file
-from .utils import parse_date_candidates
+from .utils import normalize_for_match, parse_date_candidates
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -307,6 +308,7 @@ def delete_client_records(db: Session, nsv_client_ids: List[str]):
             "deleted_sources": 0,
             "deleted_details": 0,
             "deleted_enrollments": 0,
+            "deleted_aliases": 0,
             "deleted_reviews": 0,
         }
 
@@ -315,6 +317,7 @@ def delete_client_records(db: Session, nsv_client_ids: List[str]):
     deleted_sources = db.query(ClientSource).filter(ClientSource.nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
     deleted_details = db.query(SourceDetail).filter(SourceDetail.nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
     deleted_enrollments = db.query(Enrollment).filter(Enrollment.nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
+    deleted_aliases = db.query(ClientAlias).filter(ClientAlias.nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
     deleted_reviews = db.query(PotentialMatch).filter(PotentialMatch.possible_nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
     deleted_clients = db.query(Client).filter(Client.nsv_client_id.in_(nsv_client_ids)).delete(synchronize_session=False)
 
@@ -323,6 +326,7 @@ def delete_client_records(db: Session, nsv_client_ids: List[str]):
         "deleted_sources": deleted_sources,
         "deleted_details": deleted_details,
         "deleted_enrollments": deleted_enrollments,
+        "deleted_aliases": deleted_aliases,
         "deleted_reviews": deleted_reviews,
     }
 
@@ -361,6 +365,7 @@ def admin_clear_database(request: ClearDatabaseRequest, db: Session = Depends(ge
         "source_details": db.query(SourceDetail).delete(synchronize_session=False),
         "client_sources": db.query(ClientSource).delete(synchronize_session=False),
         "enrollments": db.query(Enrollment).delete(synchronize_session=False),
+        "client_aliases": db.query(ClientAlias).delete(synchronize_session=False),
         "potential_matches": db.query(PotentialMatch).delete(synchronize_session=False),
         "imports": db.query(ImportLog).delete(synchronize_session=False),
         "program_metrics": db.query(ProgramMetric).delete(synchronize_session=False),
@@ -380,6 +385,17 @@ def attach_review_row_to_client(db: Session, review: PotentialMatch, client: Cli
     first_name, last_name, dob, hmis_id, ecw_id = extract_identity(row)
 
     update_client_from_row(client, hmis_id, ecw_id, dob, row)
+    add_client_alias(
+        db=db,
+        client=client,
+        first_name=first_name,
+        last_name=last_name,
+        dob=dob,
+        source_system=review.source_system,
+        original_file=review.original_file,
+        created_from_review_id=review.review_id,
+        confidence_score=review.confidence_score,
+    )
     source_client_id = hmis_id or ecw_id
 
     db.add(ClientSource(
@@ -435,6 +451,9 @@ async def upload_preview(file: UploadFile = File(...), db: Session = Depends(get
     saved_path.write_bytes(content)
 
     preview = preview_file(str(saved_path), max_rows=10)
+    route_decision = classify_upload_dataframe(load_file(saved_path, allow_metrics=True))
+    preview["file_type"] = route_decision.route.value
+    preview["import_route_reason"] = route_decision.reason
     previous_imports = (
         db.query(ImportLog)
         .filter(ImportLog.file_name == file.filename)
@@ -541,10 +560,20 @@ def serialize_review(review: PotentialMatch, possible_client: Optional[Client] =
     """Convert one review row into the shape used by the Review Queue UI."""
 
     recommended_action = "accept_match" if review.possible_nsv_client_id else "create_partial_profile"
+    imported_name = f"{review.suggested_first_name or ''} {review.suggested_last_name or ''}".strip() or "Unknown"
+    if possible_client:
+        possible_name = f"{possible_client.first_name or ''} {possible_client.last_name or ''}".strip()
+        group_name = f"Possible existing profile: {possible_name or possible_client.nsv_client_id}"
+        group_key = f"profile-{possible_client.nsv_client_id}"
+    else:
+        group_name = f"Possible new profile: {imported_name}"
+        group_key = normalize_for_match(imported_name) or f"review-{review.review_id}"
     return {
         "review_id": review.review_id,
         "source_system": review.source_system,
         "program_name": review.program_name,
+        "duplicate_group_key": group_key,
+        "duplicate_group_label": group_name,
         "possible_nsv_client_id": review.possible_nsv_client_id,
         "possible_client": ClientOut.model_validate(possible_client).model_dump() if possible_client else None,
         "suggested_first_name": review.suggested_first_name,
@@ -569,7 +598,12 @@ def get_reviews(
     total = query.count()
     reviews = (
         query
-        .order_by(PotentialMatch.created_at.desc(), PotentialMatch.review_id.desc())
+        .order_by(
+            PotentialMatch.suggested_last_name.asc(),
+            PotentialMatch.suggested_first_name.asc(),
+            PotentialMatch.created_at.desc(),
+            PotentialMatch.review_id.desc(),
+        )
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()

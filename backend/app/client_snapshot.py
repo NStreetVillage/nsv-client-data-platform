@@ -17,6 +17,12 @@ from sqlalchemy.orm import Session
 from .importer import safe_str
 from .metrics import split_service_metric_values, looks_like_program_or_organization
 from .models import Client, ClientSource, Enrollment, Program, SourceDetail
+from .service_rules import (
+    HEALTH_GAP_NEEDS,
+    NEED_SIGNAL_FIELDS,
+    health_categories_for_value,
+    infer_source_detail_needs,
+)
 
 
 PROGRAM_FIELDS = {
@@ -54,74 +60,6 @@ INSURANCE_DOCUMENTED_FIELDS = {
     "primary_insurance_name",
 }
 
-HEALTH_CATEGORY_KEYWORDS = {
-    "Behavioral Health": [
-        "behavioral health",
-        "mental health",
-        "therapy",
-        "therapist",
-        "counseling",
-        "counselling",
-        "psychiatry",
-        "psychiatric",
-        "psych",
-        "crisis",
-        "trauma",
-        "substance",
-        "sud",
-        "addiction",
-    ],
-    "Primary Care / Medical": [
-        "healthcare",
-        "health care",
-        "medical",
-        "primary care",
-        "doctor",
-        "clinic",
-        "wellness",
-        "physical",
-        "sick",
-        "illness",
-        "pain",
-        "injury",
-        "encounter",
-        "appointment",
-    ],
-    "Medication": [
-        "medication",
-        "medicine",
-        "prescription",
-        "pharmacy",
-        "rx",
-    ],
-    "Insurance": [
-        "insurance",
-        "medicaid",
-        "medicare",
-        "coverage",
-    ],
-    "Dental": [
-        "dental",
-        "dentist",
-        "teeth",
-        "tooth",
-    ],
-    "Vision": [
-        "vision",
-        "eye",
-        "glasses",
-        "optical",
-    ],
-    "Appointment Follow-Up": [
-        "follow-up",
-        "follow up",
-        "referral",
-        "refer",
-        "schedule",
-        "appointment",
-    ],
-}
-
 CARE_TEAM_FIELDS = {
     "case_worker_name": "Case worker",
     "staff_completing_form": "Staff completing form",
@@ -138,6 +76,12 @@ HOUSING_FIELDS = {
     "current_stay_location": "Current stay location",
     "current_housing_duration": "Time in current situation",
     "reasons_for_unhoused": "Reasons for being unhoused",
+    "homelessness_primary_reason": "Primary homelessness reason",
+    "prior_living_situation": "Prior living situation",
+    "length_of_stay_previous_place": "Length of stay in previous place",
+    "homelessness_episode_start": "Homelessness episode started",
+    "homelessness_times_last_three_years": "Times homeless in last three years",
+    "homelessness_months_last_three_years": "Months homeless in last three years",
     "housed": "Housed",
     "unit_availability": "Unit availability",
     "type_of_voucher": "Voucher type",
@@ -150,6 +94,19 @@ ELIGIBILITY_FIELDS = {
     "nsv_resident": "NSV resident",
     "snap_status": "SNAP",
     "has_photo_id": "Photo ID",
+    "name_data_quality": "Name data quality",
+    "ssn_data_quality": "SSN data quality",
+    "dob_data_quality": "DOB data quality",
+    "zip_code_data_quality": "ZIP data quality",
+    "birth_certificate_status": "Birth certificate",
+    "social_security_card_status": "Social Security card",
+    "state_id_status": "State-issued ID",
+    "health_insurance_status": "Health insurance",
+    "case_management_status": "Case management",
+    "income_any_source": "Income from any source",
+    "snap_food_stamps": "SNAP / Food Stamps",
+    "survivor_of_domestic_violence": "Survivor of domestic violence",
+    "currently_fleeing_domestic_violence": "Currently fleeing",
     "military_veteran": "Veteran",
     "primary_language": "Primary language",
     "patient_language": "Patient language",
@@ -269,21 +226,6 @@ def compare_requested_and_recorded_services(requested_services: list[dict], reco
     return comparison
 
 
-def health_categories_for_value(value):
-    """Return health categories implied by a service or healthcare detail value."""
-
-    text = normalize_value(value)
-    if not text:
-        return []
-
-    lower_text = text.lower()
-    categories = []
-    for category, keywords in HEALTH_CATEGORY_KEYWORDS.items():
-        if any(keyword in lower_text for keyword in keywords):
-            categories.append(category)
-    return categories
-
-
 def add_health_categories(counts: dict, value: str | None, source: str | None = None):
     """Add health category counts found in one source value."""
 
@@ -362,6 +304,17 @@ def build_service_needs(
             "reason": "Current housing information suggests housing support may be needed.",
             "sources": ["JotForm", "HMIS", "HTH"],
         })
+
+    for detail in details:
+        value = normalize_value(detail.field_value)
+        if not value:
+            continue
+        for suggested_need in infer_source_detail_needs(detail.field_name, value):
+            needs.append({
+                "label": suggested_need["label"],
+                "reason": suggested_need["reason"],
+                "sources": [detail.source_system],
+            })
 
     deduped = []
     seen = set()
@@ -519,6 +472,7 @@ def build_client_needs_summary(db: Session):
             | set(RECORDED_SERVICE_FIELDS)
             | set(HEALTH_DOCUMENTED_FIELDS)
             | set(INSURANCE_DOCUMENTED_FIELDS)
+            | NEED_SIGNAL_FIELDS
             | {"has_photo_id", "snap_status", "benefits_staff_interest", "current_housing"}
         ))
         .group_by(SourceDetail.field_name, SourceDetail.field_value, SourceDetail.source_system)
@@ -568,6 +522,12 @@ def build_client_needs_summary(db: Session):
             if any(term in lower_value for term in ["shelter", "unhoused", "homeless", "street"]):
                 add_weighted_count(need_counts, "Housing support", row_count, source_system)
 
+        for suggested_need in infer_source_detail_needs(field_name, value):
+            need_label = suggested_need["label"]
+            add_weighted_count(need_counts, need_label, row_count, source_system)
+            if need_label in HEALTH_GAP_NEEDS:
+                add_weighted_count(health_gap_counts, need_label, row_count, source_system)
+
     for key, item in requested_service_counts.items():
         if key in recorded_service_counts:
             continue
@@ -595,6 +555,7 @@ def build_client_needs_summary(db: Session):
             .filter(SourceDetail.field_value.isnot(None))
             .filter(SourceDetail.field_name.in_(
                 set(REQUESTED_SERVICE_FIELDS)
+                | NEED_SIGNAL_FIELDS
                 | {"has_photo_id", "snap_status", "benefits_staff_interest", "current_housing"}
             ))
             .distinct()

@@ -40,6 +40,26 @@ class Client(Base):
     sources = relationship("ClientSource", back_populates="client")
     enrollments = relationship("Enrollment", back_populates="client")
     source_details = relationship("SourceDetail", back_populates="client")
+    aliases = relationship("ClientAlias", back_populates="client")
+
+
+class ClientAlias(Base):
+    """Reviewed alternate spellings/names that should match back to a client."""
+
+    __tablename__ = "client_aliases"
+
+    alias_id = Column(Integer, primary_key=True, autoincrement=True)
+    nsv_client_id = Column(String(30), ForeignKey("clients.nsv_client_id"), nullable=False)
+    alias_first_name = Column(String(100), nullable=False)
+    alias_last_name = Column(String(100), nullable=False)
+    alias_dob = Column(Date, nullable=True)
+    source_system = Column(String(100), nullable=True)
+    original_file = Column(String(255), nullable=True)
+    created_from_review_id = Column(Integer, nullable=True)
+    confidence_score = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    client = relationship("Client", back_populates="aliases")
 
 
 class Program(Base):

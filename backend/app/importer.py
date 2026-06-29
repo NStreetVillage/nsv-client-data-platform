@@ -7,6 +7,7 @@ enrollments, and create review records when matching is uncertain.
 """
 
 import json
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -14,7 +15,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
-from .models import Client, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch
+from .models import Client, ClientAlias, Program, ClientSource, SourceDetail, Enrollment, ImportLog, PotentialMatch
 from .utils import clean_name, normalize_for_match, parse_date, generate_nsv_id, split_full_name
 
 
@@ -165,6 +166,7 @@ SOURCE_DETAIL_FIELDS = {
     "First Name": "source_first_name",
     "First Name ": "source_first_name",
     "Last Name": "source_last_name",
+    "Name Data Quality": "name_data_quality",
     "Client Name": "source_client_name",
     "Patient Name": "source_patient_name",
     "Preferred Name": "source_preferred_name",
@@ -173,7 +175,11 @@ SOURCE_DETAIL_FIELDS = {
     "Date of Birth.1": "source_date_of_birth_alternate",
     "Date of Birth(893)": "source_date_of_birth",
     "DOB": "source_date_of_birth",
+    "DOB Type": "dob_data_quality",
+    "Date of Birth Type": "dob_data_quality",
+    "Data of Birth Type": "dob_data_quality",
     "Patient DOB": "source_patient_dob",
+    "SSN Data Quality": "ssn_data_quality",
     "Client Uid": "source_client_uid",
     "Client Unique Id": "source_client_unique_id",
     "Client First Name": "source_first_name",
@@ -275,6 +281,23 @@ SOURCE_DETAIL_FIELDS = {
     "Exit Destination": "exit_destination",
     "Household ID": "household_id",
     "Relationship to Head of Household": "relationship_to_head_of_household",
+    "Prior Living Situation": "prior_living_situation",
+    "Length of Stay in Previous Place": "length_of_stay_previous_place",
+    "Approximate date this episode of homelessness started": "homelessness_episode_start",
+    "Number of times the client has been on the streets, in ES, or SH in the past three years including today": "homelessness_times_last_three_years",
+    "Total number of months homeless on the street, in ES or SH in the past three years": "homelessness_months_last_three_years",
+    "Homelessness Primary Reason": "homelessness_primary_reason",
+    "Zip Code Data Quality": "zip_code_data_quality",
+    "Income from any Source": "income_any_source",
+    "SNAP / Food Stamps": "snap_food_stamps",
+    "Covered by Health Insurance": "health_insurance_status",
+    "Does the client have their birth certificate": "birth_certificate_status",
+    "Does the client have their social security card": "social_security_card_status",
+    "Does the client have their state-issued ID": "state_id_status",
+    "Are you engaged with case management": "case_management_status",
+    "Survivor of Domestic Violence": "survivor_of_domestic_violence",
+    "If \"Yes,\" When Experience Occurred": "domestic_violence_when",
+    " Are you currently fleeing?": "currently_fleeing_domestic_violence",
 }
 
 # Fields that belong directly to the client/enrollment import model.
@@ -320,10 +343,52 @@ def is_occupancy_report_layout(df: pd.DataFrame) -> bool:
     return OCCUPANCY_REPORT_COLUMNS.issubset(normalized_columns)
 
 
+def is_client_identity_layout(df: pd.DataFrame) -> bool:
+    """Detect uploads that clearly contain person-level client identity fields."""
+
+    columns = {str(column).strip().lower() for column in df.columns}
+
+    has_full_name = bool({
+        "full_name",
+        "full name",
+        "client full name",
+        "client name",
+        "patient name",
+        "name",
+    } & columns)
+    has_split_name = bool({"first_name", "first name", "client first name", "patient first name"} & columns) and bool({
+        "last_name",
+        "last name",
+        "client last name",
+        "patient last name",
+    } & columns)
+    has_birthdate = bool({
+        "date_of_birth",
+        "date of birth",
+        "dob",
+        "date of birth.1",
+        "date of birth(893)",
+        "patient dob",
+    } & columns)
+    has_source_identity = bool({"source app", "what can we help you with today?"} & columns)
+
+    return (has_full_name or has_split_name) and (has_birthdate or has_source_identity)
+
+
 def is_supported_metrics_layout(df: pd.DataFrame) -> bool:
     """Return whether a dataframe can be handled by metrics.py."""
 
-    return is_metrics_layout(df) or is_occupancy_report_layout(df) or is_operational_metrics_layout(df)
+    return (
+        is_metrics_layout(df)
+        or is_occupancy_report_layout(df)
+        or (is_operational_metrics_layout(df) and not is_client_identity_layout(df))
+    )
+
+
+def classify_preview_file_type(df: pd.DataFrame) -> str:
+    """Return the preview label used by the frontend upload workflow."""
+
+    return "metrics" if is_supported_metrics_layout(df) else "client"
 
 
 def is_enrichment_only_layout(df: pd.DataFrame) -> bool:
@@ -516,7 +581,7 @@ def preview_file(file_path: str, max_rows: int = 10):
     df = load_file(path, allow_metrics=True)
     return {
         "file_name": path.name,
-        "file_type": "metrics" if is_supported_metrics_layout(df) else "client",
+        "file_type": classify_preview_file_type(df),
         "columns": [str(c) for c in df.columns],
         "rows": df.head(max_rows).fillna("").to_dict(orient="records"),
         "row_count": len(df),
@@ -554,6 +619,38 @@ def find_by_name_dob(db: Session, first_name: str, last_name: str, dob):
             return client
 
     return None
+
+
+def find_by_saved_alias(db: Session, first_name: str, last_name: str, dob=None):
+    """Find clients through reviewed aliases from previous manual matches."""
+
+    if not first_name or not last_name:
+        return []
+
+    nf = normalize_for_match(first_name)
+    nl = normalize_for_match(last_name)
+    aliases = (
+        db.query(ClientAlias)
+        .filter(
+            ClientAlias.alias_first_name.ilike(first_name),
+            ClientAlias.alias_last_name.ilike(last_name),
+        )
+        .limit(10)
+        .all()
+    )
+
+    matches = []
+    for alias in aliases:
+        if normalize_for_match(alias.alias_first_name) != nf:
+            continue
+        if normalize_for_match(alias.alias_last_name) != nl:
+            continue
+        if dob and alias.alias_dob and alias.alias_dob != dob:
+            continue
+        if alias.client:
+            matches.append(alias.client)
+
+    return matches
 
 
 def find_name_only_candidates(db: Session, first_name: str, last_name: str):
@@ -642,6 +739,93 @@ def find_by_partial_identity(db: Session, first_name: str, last_name: str, dob):
             matches.append(client)
 
     return matches
+
+
+def name_similarity(left: str, right: str) -> float:
+    """Score two normalized name strings for typo/variant matching."""
+
+    left_clean = normalize_for_match(left)
+    right_clean = normalize_for_match(right)
+    if not left_clean or not right_clean:
+        return 0.0
+    if left_clean == right_clean:
+        return 1.0
+    return SequenceMatcher(None, left_clean, right_clean).ratio()
+
+
+def fuzzy_candidate_score(first_name: str, last_name: str, dob, client: Client) -> float:
+    """Return a conservative score for likely duplicate client profiles."""
+
+    incoming_first = normalize_for_match(first_name)
+    incoming_last = normalize_for_match(last_name)
+    client_first = normalize_for_match(client.first_name)
+    client_last = normalize_for_match(client.last_name)
+    if not incoming_first or not incoming_last or not client_first or not client_last:
+        return 0.0
+
+    first_score = name_similarity(incoming_first, client_first)
+    last_score = name_similarity(incoming_last, client_last)
+    full_score = name_similarity(f"{incoming_first} {incoming_last}", f"{client_first} {client_last}")
+    score = (first_score * 0.35) + (last_score * 0.45) + (full_score * 0.20)
+
+    if dob and client.date_of_birth:
+        score += 0.12 if dob == client.date_of_birth else -0.20
+    elif dob or client.date_of_birth:
+        score -= 0.03
+
+    # First-initial + similar last name is common in abbreviated/dirty exports.
+    if incoming_first[:1] == client_first[:1] and last_score >= 0.84:
+        score = max(score, 0.78)
+
+    return max(0.0, min(score, 1.0))
+
+
+def is_strong_fuzzy_duplicate(first_name: str, last_name: str, dob, client: Client, score: float) -> bool:
+    """Decide whether a fuzzy score is strong enough to send to review."""
+
+    incoming_first = normalize_for_match(first_name)
+    incoming_last = normalize_for_match(last_name)
+    client_first = normalize_for_match(client.first_name)
+    client_last = normalize_for_match(client.last_name)
+    first_score = name_similarity(incoming_first, client_first)
+    last_score = name_similarity(incoming_last, client_last)
+    full_score = name_similarity(f"{incoming_first} {incoming_last}", f"{client_first} {client_last}")
+
+    if dob and client.date_of_birth and dob == client.date_of_birth:
+        return score >= 0.76 and (first_score >= 0.62 or last_score >= 0.88)
+
+    # Without DOB, a shared or nearly shared last name is not enough. This keeps
+    # unrelated people with the same surname out of the duplicate queue.
+    if first_score < 0.78:
+        return False
+    if last_score < 0.84:
+        return False
+    return score >= 0.84 and full_score >= 0.84
+
+
+def find_fuzzy_duplicate_candidates(db: Session, first_name: str, last_name: str, dob=None, limit: int = 5):
+    """Find existing profiles with similar names that need human review."""
+
+    nf = normalize_for_match(first_name)
+    nl = normalize_for_match(last_name)
+    if not nf or not nl:
+        return []
+
+    filters = []
+    if dob:
+        filters.append(Client.date_of_birth == dob)
+    filters.append(Client.first_name.ilike(f"{first_name[:1]}%"))
+    filters.append(Client.last_name.ilike(f"{last_name[:1]}%"))
+
+    candidates = db.query(Client).filter(or_(*filters)).limit(250).all()
+    scored = []
+    for client in candidates:
+        score = fuzzy_candidate_score(first_name, last_name, dob, client)
+        if is_strong_fuzzy_duplicate(first_name, last_name, dob, client, score):
+            scored.append((client, round(score, 2)))
+
+    scored.sort(key=lambda item: item[1], reverse=True)
+    return scored[:limit]
 
 
 def extract_identity(row):
@@ -819,6 +1003,54 @@ def add_identity_enrichment_detail(db, client, source_system, program_name, path
     ))
 
 
+def add_client_alias(
+    db,
+    client,
+    first_name,
+    last_name,
+    dob=None,
+    source_system=None,
+    original_file=None,
+    created_from_review_id=None,
+    confidence_score=None,
+):
+    """Remember a reviewed alternate name spelling for future imports."""
+
+    if not client or not first_name or not last_name:
+        return None
+
+    alias_first = clean_name(first_name)
+    alias_last = clean_name(last_name)
+    if (
+        normalize_for_match(alias_first) == normalize_for_match(client.first_name)
+        and normalize_for_match(alias_last) == normalize_for_match(client.last_name)
+        and (not dob or dob == client.date_of_birth)
+    ):
+        return None
+
+    for alias in db.query(ClientAlias).filter(ClientAlias.nsv_client_id == client.nsv_client_id).all():
+        same_name = (
+            normalize_for_match(alias.alias_first_name) == normalize_for_match(alias_first)
+            and normalize_for_match(alias.alias_last_name) == normalize_for_match(alias_last)
+        )
+        same_dob = alias.alias_dob == dob
+        if same_name and same_dob:
+            return alias
+
+    alias = ClientAlias(
+        nsv_client_id=client.nsv_client_id,
+        alias_first_name=alias_first,
+        alias_last_name=alias_last,
+        alias_dob=dob,
+        source_system=source_system,
+        original_file=original_file,
+        created_from_review_id=created_from_review_id,
+        confidence_score=confidence_score,
+    )
+    db.add(alias)
+    return alias
+
+
 def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
     """
     Matching hierarchy:
@@ -841,6 +1073,12 @@ def match_client(db: Session, first_name, last_name, dob, hmis_id, ecw_id):
     client = find_by_name_dob(db, first_name, last_name, dob)
     if client:
         return client, "Name + DOB", 0.95, "matched"
+
+    alias_candidates = find_by_saved_alias(db, first_name, last_name, dob)
+    if len(alias_candidates) == 1:
+        return alias_candidates[0], "Reviewed alias", 0.92, "matched"
+    if len(alias_candidates) > 1:
+        return alias_candidates[0], "Multiple reviewed alias matches", 0.55, "review"
 
     name_candidates = find_name_only_candidates(db, first_name, last_name)
     if len(name_candidates) == 1:
@@ -929,6 +1167,31 @@ def add_review_record(db, row, source_system, program_name, path, possible_clien
     db.add(review)
 
 
+def add_fuzzy_duplicate_reviews(db, row, source_system, program_name, path, first_name, last_name, dob):
+    """Create one review row per likely fuzzy duplicate candidate."""
+
+    fuzzy_candidates = find_fuzzy_duplicate_candidates(db, first_name, last_name, dob)
+    if not fuzzy_candidates:
+        return 0
+
+    for possible_client, confidence in fuzzy_candidates:
+        add_review_record(
+            db=db,
+            row=row,
+            source_system=source_system,
+            program_name=program_name,
+            path=path,
+            possible_client=possible_client,
+            first_name=first_name,
+            last_name=last_name,
+            dob=dob,
+            confidence=confidence,
+            reason="Possible duplicate by similar name",
+        )
+
+    return len(fuzzy_candidates)
+
+
 def import_file(
     db: Session,
     file_path: str,
@@ -991,25 +1254,39 @@ def import_file(
 
             # Ambiguous rows are saved for manual review instead of auto-matching.
             if action == "review":
-                rows_review += 1
-                add_review_record(
-                    db=db,
-                    row=row,
-                    source_system=source_system,
-                    program_name=program_name,
-                    path=Path(display_file_name),
-                    possible_client=client,
-                    first_name=first_name,
-                    last_name=last_name,
-                    dob=dob,
-                    confidence=confidence,
-                    reason=match_method,
+                review_path = Path(display_file_name)
+                fuzzy_review_count = add_fuzzy_duplicate_reviews(
+                    db, row, source_system, program_name, review_path, first_name, last_name, dob
                 )
+                if fuzzy_review_count:
+                    rows_review += fuzzy_review_count
+                else:
+                    rows_review += 1
+                    add_review_record(
+                        db=db,
+                        row=row,
+                        source_system=source_system,
+                        program_name=program_name,
+                        path=review_path,
+                        possible_client=client,
+                        first_name=first_name,
+                        last_name=last_name,
+                        dob=dob,
+                        confidence=confidence,
+                        reason=match_method,
+                    )
                 db.commit()
                 continue
 
             # Either create a new client or update missing fields on an existing match.
             if action == "create":
+                fuzzy_review_count = add_fuzzy_duplicate_reviews(
+                    db, row, source_system, program_name, Path(display_file_name), first_name, last_name, dob
+                )
+                if fuzzy_review_count:
+                    rows_review += fuzzy_review_count
+                    db.commit()
+                    continue
                 client = create_client(db, first_name, last_name, dob, hmis_id, ecw_id, row)
                 rows_created += 1
             else:

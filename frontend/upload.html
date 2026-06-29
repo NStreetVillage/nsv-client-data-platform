@@ -960,6 +960,21 @@
       min-width: 220px;
     }
 
+    .review-group-row td {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--accent-soft);
+      color: var(--text);
+      font-weight: 900;
+      border-top: 2px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .review-group-row span {
+      color: var(--muted);
+      font-weight: 800;
+      margin-left: var(--space-sm);
+    }
+
     .review-help {
       padding: var(--space-md);
       border: 1px solid var(--border);
@@ -1996,12 +2011,31 @@
     { field: "future_service_interest", label: "Future Service Interest" },
     { field: "has_photo_id", label: "Photo ID" },
     { field: "photo_id_state_issuer", label: "Photo ID State/Issuer" },
+    { field: "name_data_quality", label: "Name Data Quality" },
+    { field: "ssn_data_quality", label: "SSN Data Quality" },
+    { field: "dob_data_quality", label: "DOB Data Quality" },
+    { field: "zip_code_data_quality", label: "ZIP Data Quality" },
+    { field: "birth_certificate_status", label: "Birth Certificate" },
+    { field: "social_security_card_status", label: "Social Security Card" },
+    { field: "state_id_status", label: "State-Issued ID" },
+    { field: "health_insurance_status", label: "Health Insurance" },
+    { field: "case_management_status", label: "Case Management" },
+    { field: "income_any_source", label: "Income From Any Source" },
+    { field: "snap_food_stamps", label: "SNAP / Food Stamps" },
+    { field: "survivor_of_domestic_violence", label: "Survivor Of Domestic Violence" },
+    { field: "currently_fleeing_domestic_violence", label: "Currently Fleeing" },
     { field: "primary_language", label: "Primary Language" },
     { field: "patient_language", label: "Patient Language" },
     { field: "current_housing", label: "Current Housing" },
     { field: "current_stay_location", label: "Current Stay Location" },
     { field: "current_housing_duration", label: "Current Housing Duration" },
     { field: "reasons_for_unhoused", label: "Reasons For Being Unhoused" },
+    { field: "homelessness_primary_reason", label: "Primary Homelessness Reason" },
+    { field: "prior_living_situation", label: "Prior Living Situation" },
+    { field: "length_of_stay_previous_place", label: "Length Of Stay In Previous Place" },
+    { field: "homelessness_episode_start", label: "Homelessness Episode Started" },
+    { field: "homelessness_times_last_three_years", label: "Times Homeless In Last Three Years" },
+    { field: "homelessness_months_last_three_years", label: "Months Homeless In Last Three Years" },
     { field: "linked_service_agency", label: "Linked Service Agency" },
     { field: "military_veteran", label: "Military Veteran" },
     { field: "primary_race", label: "Primary Race" },
@@ -2201,7 +2235,7 @@
   // Shows whether requested services already have matching documented activity.
   function renderServiceStatusRows(items) {
     if (!items.length) {
-      return `<p class="profile-subtitle">No requested services have been recorded yet.</p>`;
+      return `<p class="profile-subtitle">No comparable requested items were found for this section.</p>`;
     }
 
     return `
@@ -2471,6 +2505,12 @@
       <div class="profile-tab-panel" data-profile-panel="services">
         <div class="profile-grid">
           <div class="profile-card wide">
+            <h3>Suggested Follow-Up Needs</h3>
+            <p class="profile-subtitle">These are inferred from requested services, missing documentation, housing context, and reasons for being unhoused.</p>
+            ${renderNeeds(serviceNeeds)}
+          </div>
+
+          <div class="profile-card wide">
             <h3>Requested Services vs. Documented Services</h3>
             ${renderServiceStatusRows(serviceStatus)}
           </div>
@@ -2605,25 +2645,38 @@
   // Builds the Review Queue table from backend review records.
   function renderReviewTable(reviews) {
     visibleReviewIds = reviews.map(review => review.review_id);
-    const rows = reviews.map(review => {
-      const checked = selectedReviewIds.has(review.review_id) ? "checked" : "";
-      const possibleClient = review.possible_client;
-      const suggestedName = `${review.suggested_first_name ?? ""} ${review.suggested_last_name ?? ""}`.trim() || "N/A";
-      const possibleName = possibleClient
-        ? `${possibleClient.first_name ?? ""} ${possibleClient.last_name ?? ""}`.trim()
-        : "No suggested existing profile";
-      const recommendedLabel = review.recommended_action === "accept_match"
-        ? "Recommended match"
-        : "Recommended new profile";
-      const recommendedButtonLabel = review.recommended_action === "accept_match"
-        ? "Accept suggested match"
-        : "Create partial profile";
-      const recommendationHelp = review.recommended_action === "accept_match"
-        ? "Recommended: attach this row to the possible profile."
-        : "Recommended: create a partial profile and fill missing DOB later.";
-      const targetId = possibleClient ? possibleClient.nsv_client_id : "";
+    const groupedReviews = groupReviewsByDuplicateCandidate(reviews);
+    const rows = groupedReviews.map(group => {
+      const groupCountText = group.items.length === 1
+        ? "1 imported row to review"
+        : `${group.items.length} imported rows to review`;
+      const groupHeader = `
+        <tr class="review-group-row">
+          <td colspan="8">
+            ${escapeHtml(group.label)}
+            <span>${escapeHtml(groupCountText)}</span>
+          </td>
+        </tr>
+      `;
+      const groupRows = group.items.map(review => {
+        const checked = selectedReviewIds.has(review.review_id) ? "checked" : "";
+        const possibleClient = review.possible_client;
+        const suggestedName = `${review.suggested_first_name ?? ""} ${review.suggested_last_name ?? ""}`.trim() || "N/A";
+        const possibleName = possibleClient
+          ? `${possibleClient.first_name ?? ""} ${possibleClient.last_name ?? ""}`.trim()
+          : "No suggested existing profile";
+        const recommendedLabel = review.recommended_action === "accept_match"
+          ? "Recommended match"
+          : "Recommended new profile";
+        const recommendedButtonLabel = review.recommended_action === "accept_match"
+          ? "Accept suggested match"
+          : "Create partial profile";
+        const recommendationHelp = review.recommended_action === "accept_match"
+          ? "Recommended: attach this row to the possible profile."
+          : "Recommended: create a partial profile and fill missing DOB later.";
+        const targetId = possibleClient ? possibleClient.nsv_client_id : "";
 
-      return `
+        return `
       <tr>
         <td class="checkbox-cell">
           <label class="bulk-select-label" title="Check this row to include it when you apply recommendations in bulk.">
@@ -2658,6 +2711,8 @@
         </td>
       </tr>
     `;
+      }).join("");
+      return `${groupHeader}${groupRows}`;
     }).join("");
 
     return `
@@ -2668,6 +2723,23 @@
         <tbody>${rows}</tbody>
       </table>
     `;
+  }
+
+  // Groups review rows by the likely target profile so name variants sit together.
+  function groupReviewsByDuplicateCandidate(reviews) {
+    const groups = new Map();
+    reviews.forEach(review => {
+      const fallbackName = `${review.suggested_first_name ?? ""} ${review.suggested_last_name ?? ""}`.trim() || "Unknown";
+      const key = review.duplicate_group_key || fallbackName.toLowerCase();
+      if (!groups.has(key)) {
+        groups.set(key, {
+          label: review.duplicate_group_label || fallbackName,
+          items: []
+        });
+      }
+      groups.get(key).items.push(review);
+    });
+    return [...groups.values()];
   }
 
   // Tracks which review rows should receive their recommended operation in bulk.
