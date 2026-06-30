@@ -954,10 +954,44 @@
     }
 
     .review-actions {
+      display: grid;
+      gap: var(--space-sm);
+      min-width: 250px;
+    }
+
+    .review-recommendation-note {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .review-decision-buttons {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--space-sm);
-      min-width: 220px;
+      gap: 6px;
+    }
+
+    .review-decision-buttons button {
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+
+    .review-decision-buttons .match-action {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .review-decision-buttons .create-action {
+      background: var(--surface);
+      border-color: #9fbec1;
+      color: var(--text);
+    }
+
+    .review-decision-buttons .ignore-action {
+      color: var(--muted);
     }
 
     .review-group-row td {
@@ -984,6 +1018,27 @@
       font-weight: 700;
     }
 
+    .review-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+      margin-top: var(--space-md);
+    }
+
+    .review-toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .review-selected-count {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
     .bulk-select-label {
       display: inline-flex;
       align-items: center;
@@ -998,17 +1053,6 @@
     .bulk-select-label input {
       width: auto;
       min-height: auto;
-    }
-
-    .recommendation-pill {
-      display: inline-flex;
-      align-items: center;
-      padding: 6px 10px;
-      border: 1px solid #cbdadb;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      font-size: 13px;
-      font-weight: 800;
     }
 
     .embedded-review-panel {
@@ -1322,6 +1366,20 @@
                 <option value="500">500</option>
               </select>
             </div>
+            <div>
+              <label for="clientSortStyle">Sort</label>
+              <select id="clientSortStyle" onchange="changeClientSort()">
+                <option value="created_at:desc" selected>Recently added</option>
+                <option value="last_name:asc">Last name A-Z</option>
+                <option value="last_name:desc">Last name Z-A</option>
+                <option value="first_name:asc">First name A-Z</option>
+                <option value="first_name:desc">First name Z-A</option>
+                <option value="dob:asc">DOB oldest first</option>
+                <option value="dob:desc">DOB newest first</option>
+                <option value="nsv_id:asc">NSV ID lowest first</option>
+                <option value="nsv_id:desc">NSV ID highest first</option>
+              </select>
+            </div>
           </div>
           <div class="pager">
             <button class="primary" onclick="searchClients()">Search</button>
@@ -1341,26 +1399,30 @@
             <div class="embedded-review-body">
               <p>Resolve records that could not be safely matched automatically. Use the comparison cards to verify whether the imported row and possible profile are the same person.</p>
               <div class="review-help">
-                Check rows only when you want to apply their recommended action in bulk. For one row at a time, use the buttons in that row.
+                Check rows only when you want the app to do each row's displayed recommended action. For one row at a time, use the decision buttons in that row.
               </div>
-              <div class="quick-actions flush">
-                <button class="primary" onclick="loadReviews()">Refresh Review Queue</button>
-                <button class="secondary" onclick="selectVisibleReviewRows()">Select visible recommendations</button>
-                <button class="secondary" onclick="clearReviewSelection()">Clear selection</button>
-                <button class="secondary" id="applySelectedReviewsButton" onclick="applySelectedReviewRecommendations()" disabled title="Check one or more rows first.">Apply recommendations to checked rows</button>
-                <span id="reviewSelectedCount">0 checked for bulk action</span>
-                <label style="margin:0; width:auto;">
-                  Page size
-                  <select id="reviewPageSize" onchange="loadReviews(1)" style="width:120px;">
-                    <option value="50">50</option>
-                    <option value="100" selected>100</option>
-                    <option value="250">250</option>
-                    <option value="500">500</option>
-                  </select>
-                </label>
-                <button class="secondary" id="prevReviewsButton" onclick="changeReviewPage(-1)">Previous</button>
-                <span id="reviewPageStatus">Page 1</span>
-                <button class="secondary" id="nextReviewsButton" onclick="changeReviewPage(1)">Next</button>
+              <div class="review-toolbar">
+                <div class="review-toolbar-group">
+                  <button class="primary" onclick="loadReviews()">Refresh</button>
+                  <button class="secondary" onclick="selectVisibleReviewRows()">Check visible rows</button>
+                  <button class="secondary" onclick="clearReviewSelection()">Clear checks</button>
+                  <button class="secondary" id="applySelectedReviewsButton" onclick="applySelectedReviewRecommendations()" disabled title="Check one or more rows first.">Do recommended action for checked rows</button>
+                  <span class="review-selected-count" id="reviewSelectedCount">0 checked</span>
+                </div>
+                <div class="review-toolbar-group">
+                  <label style="margin:0; width:auto;">
+                    Rows
+                    <select id="reviewPageSize" onchange="loadReviews(1)" style="width:100px;">
+                      <option value="50">50</option>
+                      <option value="100" selected>100</option>
+                      <option value="250">250</option>
+                      <option value="500">500</option>
+                    </select>
+                  </label>
+                  <button class="secondary" id="prevReviewsButton" onclick="changeReviewPage(-1)">Previous</button>
+                  <span id="reviewPageStatus">Page 1</span>
+                  <button class="secondary" id="nextReviewsButton" onclick="changeReviewPage(1)">Next</button>
+                </div>
               </div>
               <div id="reviewMessage" class="message" style="display:none;"></div>
               <div id="reviewsTable"></div>
@@ -1427,6 +1489,25 @@
             <h3>Security</h3>
             <p>Future settings for login, user roles, access permissions, audit logs, and session timeout.</p>
           </div>
+        </div>
+
+        <div class="panel">
+          <h3>Merge Duplicate Client Profiles</h3>
+          <p>Use this when two master profiles are the same person but could not be resolved automatically. The kept profile remains, and the duplicate profile's source rows, enrollments, aliases, and details are moved into it.</p>
+          <div class="grid">
+            <div>
+              <label for="mergeKeepClientId">Keep this NSV ID</label>
+              <input id="mergeKeepClientId" placeholder="Example: NSV-000123" />
+            </div>
+            <div>
+              <label for="mergeDuplicateClientId">Merge this duplicate NSV ID</label>
+              <input id="mergeDuplicateClientId" placeholder="Example: NSV-000456" />
+            </div>
+          </div>
+          <div class="quick-actions">
+            <button class="primary" onclick="mergeClientProfiles()">Merge Duplicate Into Kept Profile</button>
+          </div>
+          <div id="mergeClientMessage" class="message" style="display:none;"></div>
         </div>
 
         <div class="panel danger-panel">
@@ -1541,6 +1622,7 @@
     clients: {
       search: $("clientSearch"),
       pageSize: $("clientPageSize"),
+      sortStyle: $("clientSortStyle"),
       pageStatus: $("clientPageStatus"),
       prevButton: $("prevClientsButton"),
       nextButton: $("nextClientsButton"),
@@ -1586,6 +1668,9 @@
   };
 
   dom.admin = {
+    mergeKeepClientId: $("mergeKeepClientId"),
+    mergeDuplicateClientId: $("mergeDuplicateClientId"),
+    mergeMessage: $("mergeClientMessage"),
     search: $("adminClientSearch"),
     pageSize: $("adminClientPageSize"),
     clientList: $("adminClientList"),
@@ -1881,6 +1966,15 @@
     return Number(dom.clients.pageSize.value || 50);
   }
 
+  // Reads the combined sort dropdown and converts it into API parameters.
+  function getClientSortParams() {
+    const [sortBy, sortDir] = (dom.clients.sortStyle.value || "created_at:desc").split(":");
+    return {
+      sortBy: sortBy || "created_at",
+      sortDir: sortDir || "desc"
+    };
+  }
+
   // Starts a fresh client search from page 1.
   function searchClients() {
     loadClients(1);
@@ -1888,6 +1982,11 @@
 
   // Reloads from page 1 when the page size changes.
   function changeClientPageSize() {
+    loadClients(1);
+  }
+
+  // Reloads from page 1 when the client sort changes.
+  function changeClientSort() {
     loadClients(1);
   }
 
@@ -1929,9 +2028,12 @@
     profile.setAttribute("aria-hidden", "true");
 
     try {
+      const sort = getClientSortParams();
       const params = new URLSearchParams({
         page: String(page),
-        page_size: String(getClientPageSize())
+        page_size: String(getClientPageSize()),
+        sort_by: sort.sortBy,
+        sort_dir: sort.sortDir
       });
 
       // Include the search term only when the user typed one.
@@ -2635,10 +2737,10 @@
       : "No review rows";
     dom.reviews.prevButton.disabled = page <= 1;
     dom.reviews.nextButton.disabled = !totalPages || page >= totalPages;
-    dom.reviews.selectedCount.textContent = `${selectedReviewIds.size} checked for bulk action`;
+    dom.reviews.selectedCount.textContent = `${selectedReviewIds.size} checked`;
     dom.reviews.applySelectedButton.disabled = selectedReviewIds.size === 0;
     dom.reviews.applySelectedButton.title = selectedReviewIds.size
-      ? "Apply each checked row's recommended action."
+      ? "Do the displayed recommended action for each checked row."
       : "Check one or more rows first.";
   }
 
@@ -2666,21 +2768,24 @@
           ? `${possibleClient.first_name ?? ""} ${possibleClient.last_name ?? ""}`.trim()
           : "No suggested existing profile";
         const recommendedLabel = review.recommended_action === "accept_match"
-          ? "Recommended match"
-          : "Recommended new profile";
+          ? "Suggestion: likely same person"
+          : "Suggestion: create new profile";
         const recommendedButtonLabel = review.recommended_action === "accept_match"
-          ? "Accept suggested match"
-          : "Create partial profile";
+          ? "Same person"
+          : "Create profile";
         const recommendationHelp = review.recommended_action === "accept_match"
-          ? "Recommended: attach this row to the possible profile."
-          : "Recommended: create a partial profile and fill missing DOB later.";
+          ? "Attach this imported row to the possible existing profile."
+          : "Create a profile from this imported row and fill missing DOB later.";
         const targetId = possibleClient ? possibleClient.nsv_client_id : "";
+        const notDuplicateButton = review.recommended_action === "accept_match"
+          ? `<button type="button" class="secondary create-action" data-review-id="${escapeHtml(review.review_id)}" data-review-action="create_partial_profile" data-target-id="">Different person</button>`
+          : "";
 
         return `
       <tr>
         <td class="checkbox-cell">
           <label class="bulk-select-label" title="Check this row to include it when you apply recommendations in bulk.">
-            <input type="checkbox" ${checked} aria-label="Select review ${escapeHtml(review.review_id)} for bulk recommendation" onchange="toggleReviewSelection(${review.review_id}, this.checked)" />
+            <input type="checkbox" ${checked} aria-label="Check review ${escapeHtml(review.review_id)} for bulk recommended action" onchange="toggleReviewSelection(${review.review_id}, this.checked)" />
           </label>
         </td>
         <td>${escapeHtml(review.review_id)}</td>
@@ -2704,9 +2809,12 @@
         <td>${escapeHtml(review.review_reason)}</td>
         <td>
           <div class="review-actions">
-            <span class="recommendation-pill" title="${escapeHtml(recommendationHelp)}">${escapeHtml(recommendedLabel)}</span>
-            <button type="button" class="secondary" data-review-id="${escapeHtml(review.review_id)}" data-review-action="${escapeHtml(review.recommended_action)}" data-target-id="${escapeHtml(targetId)}">${escapeHtml(recommendedButtonLabel)}</button>
-            <button type="button" class="secondary" data-review-id="${escapeHtml(review.review_id)}" data-review-action="dismiss" data-target-id="">Dismiss</button>
+            <div class="review-recommendation-note" title="${escapeHtml(recommendationHelp)}">${escapeHtml(recommendedLabel)}</div>
+            <div class="review-decision-buttons">
+              <button type="button" class="secondary match-action" data-review-id="${escapeHtml(review.review_id)}" data-review-action="${escapeHtml(review.recommended_action)}" data-target-id="${escapeHtml(targetId)}">${escapeHtml(recommendedButtonLabel)}</button>
+              ${notDuplicateButton}
+              <button type="button" class="secondary ignore-action" data-review-id="${escapeHtml(review.review_id)}" data-review-action="dismiss" data-target-id="">Ignore</button>
+            </div>
           </div>
         </td>
       </tr>
@@ -2774,8 +2882,8 @@
   async function applyReviewAction(reviewId, action, targetNsvClientId = "") {
     const labels = {
       accept_match: "attach this imported row to the suggested profile",
-      create_partial_profile: "create a partial profile from this row",
-      dismiss: "dismiss this review row"
+      create_partial_profile: "create a separate profile from this imported row",
+      dismiss: "ignore this review row without importing it"
     };
     const confirmed = window.confirm(`Confirm: ${labels[action] || action}?`);
     if (!confirmed) return;
@@ -2836,6 +2944,52 @@
   // --- Admin settings ---
 
   const selectedAdminClientIds = new Set();
+
+  // Merges one duplicate master profile into the profile the user wants to keep.
+  async function mergeClientProfiles() {
+    const keepId = dom.admin.mergeKeepClientId.value.trim();
+    const duplicateId = dom.admin.mergeDuplicateClientId.value.trim();
+
+    if (!keepId || !duplicateId) {
+      dom.admin.mergeMessage.style.display = "block";
+      dom.admin.mergeMessage.textContent = "Enter both NSV IDs before merging.";
+      return;
+    }
+    if (keepId === duplicateId) {
+      dom.admin.mergeMessage.style.display = "block";
+      dom.admin.mergeMessage.textContent = "Choose two different NSV IDs.";
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Merge ${duplicateId} into ${keepId}?\n\n${keepId} will remain. ${duplicateId} will be removed after its history is moved.`
+    );
+    if (!confirmed) return;
+
+    dom.admin.mergeMessage.style.display = "block";
+    dom.admin.mergeMessage.textContent = "Merging duplicate profiles...";
+
+    const response = await fetch("/admin/clients/merge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        keep_nsv_client_id: keepId,
+        merge_nsv_client_id: duplicateId
+      })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      dom.admin.mergeMessage.textContent = "Merge failed: " + JSON.stringify(result, null, 2);
+      return;
+    }
+
+    dom.admin.mergeDuplicateClientId.value = "";
+    dom.admin.mergeMessage.textContent =
+      `Merged ${result.merged_nsv_client_id} into ${result.kept_nsv_client_id}. Moved ${result.moved_sources} source row(s), ${result.moved_details} detail row(s), and ${result.moved_enrollments} enrollment row(s).`;
+    loadStats();
+    loadClients(1);
+  }
 
   // Pressing Enter in the Admin client search box runs the cleanup search.
   dom.admin.search.addEventListener("keydown", event => {

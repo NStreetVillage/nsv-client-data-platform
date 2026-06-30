@@ -16,7 +16,7 @@ from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Que
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import pandas as pd
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from .client_snapshot import build_client_needs_summary, build_client_service_snapshot
@@ -71,6 +71,13 @@ class ClearDatabaseRequest(BaseModel):
     confirmation: str = ""
 
 
+class MergeClientsRequest(BaseModel):
+    """Request body for merging one duplicate client profile into another."""
+
+    keep_nsv_client_id: str
+    merge_nsv_client_id: str
+
+
 class ReviewActionRequest(BaseModel):
     """Request body for resolving one review queue row."""
 
@@ -114,6 +121,8 @@ def get_clients(
     search: Optional[str] = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=10, le=500),
+    sort_by: str = Query(default="created_at"),
+    sort_dir: str = Query(default="desc"),
     db: Session = Depends(get_db),
 ):
     """Search and paginate master client records for the Clients tab."""
@@ -156,10 +165,35 @@ def get_clients(
     total = query.count()
     offset = (page - 1) * page_size
 
-    # Newer clients appear first so recent imports are easy to inspect.
+    sort_direction = sort_dir.lower()
+    is_ascending = sort_direction == "asc"
+
+    first_name_sort = func.lower(func.ltrim(Client.first_name, " .`'\"-"))
+    last_name_sort = func.lower(func.ltrim(Client.last_name, " .`'\"-"))
+
+    if sort_by == "first_name":
+        sort_order = [
+            first_name_sort.asc() if is_ascending else first_name_sort.desc(),
+            last_name_sort.asc() if is_ascending else last_name_sort.desc(),
+        ]
+    elif sort_by == "last_name":
+        sort_order = [
+            last_name_sort.asc() if is_ascending else last_name_sort.desc(),
+            first_name_sort.asc() if is_ascending else first_name_sort.desc(),
+        ]
+    elif sort_by == "dob":
+        sort_order = [
+            Client.date_of_birth.is_(None).asc(),
+            Client.date_of_birth.asc() if is_ascending else Client.date_of_birth.desc(),
+        ]
+    elif sort_by == "nsv_id":
+        sort_order = [Client.nsv_client_id.asc() if is_ascending else Client.nsv_client_id.desc()]
+    else:
+        sort_order = [Client.created_at.asc() if is_ascending else Client.created_at.desc()]
+
     clients = (
         query
-        .order_by(Client.created_at.desc(), Client.nsv_client_id.asc())
+        .order_by(*sort_order, Client.nsv_client_id.asc())
         .offset(offset)
         .limit(page_size)
         .all()
@@ -331,6 +365,78 @@ def delete_client_records(db: Session, nsv_client_ids: List[str]):
     }
 
 
+def merge_client_records(db: Session, keep_id: str, merge_id: str):
+    """Merge one duplicate client profile into the profile the user wants to keep."""
+
+    keep_id = keep_id.strip()
+    merge_id = merge_id.strip()
+    if not keep_id or not merge_id:
+        raise HTTPException(status_code=400, detail="Both NSV IDs are required.")
+    if keep_id == merge_id:
+        raise HTTPException(status_code=400, detail="Choose two different client profiles to merge.")
+
+    keep_client = db.query(Client).filter(Client.nsv_client_id == keep_id).first()
+    merge_client = db.query(Client).filter(Client.nsv_client_id == merge_id).first()
+    if not keep_client:
+        raise HTTPException(status_code=404, detail=f"Keep profile {keep_id} was not found.")
+    if not merge_client:
+        raise HTTPException(status_code=404, detail=f"Duplicate profile {merge_id} was not found.")
+
+    # Preserve the duplicate profile's name as an alias so future imports can
+    # still match that spelling after the duplicate master row is removed.
+    add_client_alias(
+        db=db,
+        client=keep_client,
+        first_name=merge_client.first_name,
+        last_name=merge_client.last_name,
+        dob=merge_client.date_of_birth,
+        source_system="Manual Merge",
+        original_file="Admin merge",
+        confidence_score=1.0,
+    )
+
+    # Fill missing kept-profile fields from the duplicate profile, but do not
+    # overwrite values that are already present on the kept profile.
+    for field in ["date_of_birth", "hmis_id", "ecw_id", "gender", "race", "ethnicity", "veteran_status"]:
+        if not getattr(keep_client, field) and getattr(merge_client, field):
+            setattr(keep_client, field, getattr(merge_client, field))
+
+    moved_sources = db.query(ClientSource).filter(ClientSource.nsv_client_id == merge_id).update(
+        {ClientSource.nsv_client_id: keep_id},
+        synchronize_session=False,
+    )
+    moved_details = db.query(SourceDetail).filter(SourceDetail.nsv_client_id == merge_id).update(
+        {SourceDetail.nsv_client_id: keep_id},
+        synchronize_session=False,
+    )
+    moved_enrollments = db.query(Enrollment).filter(Enrollment.nsv_client_id == merge_id).update(
+        {Enrollment.nsv_client_id: keep_id},
+        synchronize_session=False,
+    )
+    moved_aliases = db.query(ClientAlias).filter(ClientAlias.nsv_client_id == merge_id).update(
+        {ClientAlias.nsv_client_id: keep_id},
+        synchronize_session=False,
+    )
+    updated_reviews = db.query(PotentialMatch).filter(PotentialMatch.possible_nsv_client_id == merge_id).update(
+        {PotentialMatch.possible_nsv_client_id: keep_id},
+        synchronize_session=False,
+    )
+
+    db.delete(merge_client)
+    db.commit()
+
+    return {
+        "status": "merged",
+        "kept_nsv_client_id": keep_id,
+        "merged_nsv_client_id": merge_id,
+        "moved_sources": moved_sources,
+        "moved_details": moved_details,
+        "moved_enrollments": moved_enrollments,
+        "moved_aliases": moved_aliases,
+        "updated_reviews": updated_reviews,
+    }
+
+
 @app.delete("/admin/clients")
 def admin_delete_clients(request: DeleteClientsRequest, db: Session = Depends(get_db)):
     """Delete selected client profiles and their dependent imported records."""
@@ -348,6 +454,17 @@ def admin_delete_clients(request: DeleteClientsRequest, db: Session = Depends(ge
         "requested_clients": len(nsv_client_ids),
         **result,
     }
+
+
+@app.post("/admin/clients/merge")
+def admin_merge_clients(request: MergeClientsRequest, db: Session = Depends(get_db)):
+    """Merge one duplicate profile into another kept profile."""
+
+    return merge_client_records(
+        db=db,
+        keep_id=request.keep_nsv_client_id,
+        merge_id=request.merge_nsv_client_id,
+    )
 
 
 @app.delete("/admin/database")
