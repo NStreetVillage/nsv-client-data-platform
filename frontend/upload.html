@@ -114,7 +114,7 @@
     }
 
     .main {
-      padding: 34px 44px 72px;
+      padding: 24px 36px 56px;
       height: 100vh;
       overflow: auto;
     }
@@ -127,9 +127,9 @@
       align-items: center;
       justify-content: space-between;
       gap: var(--space-md);
-      max-width: 1480px;
+      max-width: 1900px;
       margin: 0 auto var(--space-lg);
-      padding: 12px;
+      padding: 10px 12px;
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       background: rgba(248, 251, 251, .94);
@@ -142,6 +142,20 @@
       align-items: center;
       gap: var(--space-sm);
       flex-wrap: wrap;
+    }
+
+    .app-global-nav {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+
+    .app-global-nav button.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
     }
 
     .app-location {
@@ -160,6 +174,26 @@
       margin-bottom: var(--space-lg);
     }
 
+    .header-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: var(--space-lg);
+    }
+
+    .page-heading {
+      min-width: 0;
+    }
+
+    .page-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
     .header-card h2 {
       margin: 0 0 var(--space-xs) 0;
       font-size: 28px;
@@ -170,6 +204,11 @@
       margin: 0;
       color: var(--muted);
       max-width: 1000px;
+    }
+
+    .header-card .banner {
+      grid-column: 1 / -1;
+      margin-top: 0;
     }
 
     .panel h2,
@@ -193,7 +232,7 @@
 
     .tab-content {
       display: none;
-      max-width: 1480px;
+      max-width: 1900px;
       margin: 0 auto;
     }
 
@@ -422,6 +461,24 @@
       margin-top: 0;
     }
 
+    .control-surface {
+      display: grid;
+      gap: var(--space-md);
+    }
+
+    .control-row {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+    }
+
+    .control-row .grid {
+      flex: 1 1 720px;
+      margin: 0;
+    }
+
     .workflow-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -473,12 +530,18 @@
       align-items: center;
       gap: var(--space-sm);
       flex-wrap: wrap;
-      margin-top: var(--space-md);
+      justify-content: flex-start;
+      margin-top: 0;
+      padding: var(--space-sm);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
     }
 
     .pager span {
       color: var(--muted);
       font-weight: bold;
+      margin: 0 var(--space-xs);
     }
 
     /* Table styling for previews, search results, reviews, and summaries. */
@@ -595,7 +658,7 @@
     }
 
     #clientsTable table {
-      min-width: 820px;
+      min-width: 960px;
       margin-top: 0;
     }
 
@@ -637,6 +700,41 @@
       visibility: visible;
       transform: translateX(0);
       pointer-events: auto;
+    }
+
+    .duplicate-review-button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+      border-color: #d7b36a;
+      background: #fff9e8;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .duplicate-review-banner,
+    .review-filter-notice {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+      margin-top: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      border: 1px solid #d7b36a;
+      border-radius: var(--radius-sm);
+      background: #fff9e8;
+      color: var(--ink);
+    }
+
+    .duplicate-review-banner strong,
+    .review-filter-notice strong {
+      display: block;
+    }
+
+    .duplicate-review-banner p,
+    .review-filter-notice p {
+      margin: 0;
+      color: var(--muted);
     }
 
     /* Client profile layout and cards. */
@@ -1048,6 +1146,10 @@
       justify-content: space-between;
       gap: var(--space-md);
       margin-top: var(--space-md);
+      padding: var(--space-sm);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
     }
 
     .review-toolbar-group {
@@ -1120,10 +1222,19 @@
     @media (max-width: 900px) {
       .app-shell { grid-template-columns: 1fr; }
       .grid, .grid-3, .workflow-grid { grid-template-columns: 1fr; }
+      .header-card {
+        grid-template-columns: 1fr;
+      }
+      .page-actions {
+        justify-content: flex-start;
+      }
       .app-toolbar {
         align-items: flex-start;
         flex-direction: column;
         margin-top: 0;
+      }
+      .app-global-nav {
+        justify-content: flex-start;
       }
       .app-location {
         text-align: left;
@@ -1174,22 +1285,30 @@
       <div class="app-toolbar">
         <div class="app-toolbar-actions">
           <button class="secondary" id="appBackButton" onclick="goBackInApp()" disabled>Back</button>
-          <button class="secondary" onclick="navigateToTab('overview')">Overview</button>
+          <div class="app-location" id="appLocation">Overview</div>
         </div>
-        <div class="app-location" id="appLocation">Overview</div>
+        <div class="app-global-nav" aria-label="Workspace shortcuts">
+          <button class="secondary toolbar-tab-button active" data-toolbar-tab="overview" onclick="navigateToTab('overview')">Overview</button>
+          <button class="secondary toolbar-tab-button" data-toolbar-tab="upload" onclick="navigateToTab('upload')">Upload</button>
+          <button class="secondary toolbar-tab-button" data-toolbar-tab="clients" onclick="navigateToTab('clients')">Clients</button>
+          <button class="secondary" onclick="openReviewQueue()">Review Queue</button>
+          <button class="secondary toolbar-tab-button" data-toolbar-tab="settings" onclick="navigateToTab('settings')">Admin</button>
+        </div>
       </div>
 
       <!-- Overview tab: high-level project status, dashboard counts, and metrics upload. -->
       <section id="overview" class="tab-content active">
         <div class="header-card">
-          <h2>Overview</h2>
-          <p>Centralize client records and operational metrics from JotForm, HMIS, HTH, eCW, and planning sheets into one analytics-ready system.</p>
-          <div class="banner"><strong>Current status:</strong> Upload/import prototype with client matching, metrics sheet storage, and placeholder tabs for future Tableau dashboards, AI insights, client search, and admin workflows.</div>
-          <div class="quick-actions">
+          <div class="page-heading">
+            <h2>Overview</h2>
+            <p>Centralize client records and operational metrics from JotForm, HMIS, HTH, eCW, and planning sheets into one analytics-ready system.</p>
+          </div>
+          <div class="page-actions">
             <button class="primary" onclick="navigateToTab('upload')">Upload Client Data</button>
             <button class="secondary" onclick="navigateToTab('clients')">Search Client Records</button>
             <button class="secondary" onclick="openReviewQueue()">Open Review Queue</button>
           </div>
+          <div class="banner"><strong>Current status:</strong> Upload/import prototype with client matching, metrics sheet storage, and placeholder tabs for future Tableau dashboards, AI insights, client search, and admin workflows.</div>
         </div>
 
         <div class="grid-3">
@@ -1249,8 +1368,14 @@
       <!-- Upload tab: client CSV/Excel preview, column mapping, and import workflow. -->
       <section id="upload" class="tab-content">
         <div class="header-card">
-          <h2>Upload Data</h2>
-          <p>Use this for client roster files that should create, update, or enrich individual client profiles.</p>
+          <div class="page-heading">
+            <h2>Upload Data</h2>
+            <p>Use this for client roster files that should create, update, or enrich individual client profiles.</p>
+          </div>
+          <div class="page-actions">
+            <button class="secondary" onclick="navigateToTab('clients')">Search Clients</button>
+            <button class="secondary" onclick="openReviewQueue()">Review Queue</button>
+          </div>
         </div>
 
         <div class="panel">
@@ -1323,11 +1448,9 @@
       <!-- Future feature placeholder for Tableau embeds. -->
       <section id="visualizations" class="tab-content">
         <div class="header-card">
-          <h2>Tableau Visualizations</h2>
-          <p>Future feature area for embedded Tableau dashboards once the database is connected to Tableau.</p>
-          <div class="quick-actions">
-            <button class="secondary" onclick="goBackInApp()">Back</button>
-            <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
+          <div class="page-heading">
+            <h2>Tableau Visualizations</h2>
+            <p>Future feature area for embedded Tableau dashboards once the database is connected to Tableau.</p>
           </div>
         </div>
 
@@ -1346,11 +1469,9 @@
       <!-- Future feature placeholder for AI-assisted reporting. -->
       <section id="ai" class="tab-content">
         <div class="header-card">
-          <h2>AI Insights</h2>
-          <p>Future feature area for AI-assisted analytics after the SQL database and reporting layer are stable.</p>
-          <div class="quick-actions">
-            <button class="secondary" onclick="goBackInApp()">Back</button>
-            <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
+          <div class="page-heading">
+            <h2>AI Insights</h2>
+            <p>Future feature area for AI-assisted analytics after the SQL database and reporting layer are stable.</p>
           </div>
         </div>
 
@@ -1365,15 +1486,17 @@
       <!-- Client tab: searchable master client table and profile detail panel. -->
       <section id="clients" class="tab-content">
         <div class="header-card">
-          <h2>Client Master Records</h2>
-          <p>Search and review NSV Client IDs created from imported records.</p>
-          <div class="quick-actions">
+          <div class="page-heading">
+            <h2>Client Master Records</h2>
+            <p>Search and review NSV Client IDs created from imported records.</p>
+          </div>
+          <div class="page-actions">
             <button class="secondary" onclick="navigateToTab('upload')">Import More Data</button>
             <button class="secondary" onclick="openReviewQueue()">Review Unmatched Records</button>
           </div>
         </div>
 
-        <div class="panel">
+        <div class="panel control-surface">
           <div class="grid">
             <div>
               <label for="clientSearch">Search clients</label>
@@ -1406,7 +1529,7 @@
           </div>
           <div class="pager">
             <button class="primary" onclick="searchClients()">Search</button>
-            <button class="secondary" onclick="loadClients(1)">Refresh</button>
+            <button class="secondary" onclick="loadClients(clientPage, { preserveScroll: true })">Refresh</button>
             <button class="secondary" id="prevClientsButton" onclick="previousClientPage()">Previous</button>
             <span id="clientPageStatus">Page 0 of 0</span>
             <button class="secondary" id="nextClientsButton" onclick="nextClientPage()">Next</button>
@@ -1424,6 +1547,7 @@
               <div class="review-help">
                 Check rows only when you want the app to do each row's displayed recommended action. For one row at a time, use the decision buttons in that row.
               </div>
+              <div id="reviewFilterNotice" class="review-filter-notice" style="display:none;"></div>
               <div class="review-toolbar">
                 <div class="review-toolbar-group">
                   <button class="primary" onclick="loadReviews()">Refresh</button>
@@ -1457,12 +1581,12 @@
       <!-- Static reference list of expected source systems and program reports. -->
       <section id="sources" class="tab-content">
         <div class="header-card">
-          <h2>Data Sources</h2>
-          <p>Current CSV/report sources that feed the NSV data warehouse.</p>
-          <div class="quick-actions">
-            <button class="secondary" onclick="goBackInApp()">Back</button>
+          <div class="page-heading">
+            <h2>Data Sources</h2>
+            <p>Current CSV/report sources that feed the NSV data warehouse.</p>
+          </div>
+          <div class="page-actions">
             <button class="secondary" onclick="navigateToTab('upload')">Upload from a Source</button>
-            <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
           </div>
         </div>
 
@@ -1495,11 +1619,9 @@
       <!-- Admin settings: current cleanup tools plus future security/import-rule placeholders. -->
       <section id="settings" class="tab-content">
         <div class="header-card">
-          <h2>Admin / Settings</h2>
-          <p>Manage local demo data, import rules, and cleanup workflows.</p>
-          <div class="quick-actions">
-            <button class="secondary" onclick="goBackInApp()">Back</button>
-            <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
+          <div class="page-heading">
+            <h2>Admin / Settings</h2>
+            <p>Manage local demo data, import rules, and cleanup workflows.</p>
           </div>
         </div>
 
@@ -1623,6 +1745,7 @@
 
   let activeTabName = "overview";
   let selectedClientProfileId = null;
+  let reviewProfileFilterNsvId = null;
   const appNavigationHistory = [];
   const $ = (id) => document.getElementById(id);
 
@@ -1687,6 +1810,7 @@
       nextButton: $("nextReviewsButton"),
       selectedCount: $("reviewSelectedCount"),
       applySelectedButton: $("applySelectedReviewsButton"),
+      filterNotice: $("reviewFilterNotice"),
       message: $("reviewMessage")
     }
   };
@@ -1789,11 +1913,14 @@
 
     // Hide every tab and remove every active button state.
     document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".toolbar-tab-button").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".tab-content").forEach(section => section.classList.remove("active"));
 
     // Show the tab whose id matches this button's data-tab value.
     const activeButton = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
     if (activeButton) activeButton.classList.add("active");
+    const activeToolbarButton = document.querySelector(`.toolbar-tab-button[data-toolbar-tab="${tabName}"]`);
+    if (activeToolbarButton) activeToolbarButton.classList.add("active");
     targetSection.classList.add("active");
     activeTabName = tabName;
     updateAppNavigation();
@@ -1803,16 +1930,30 @@
       loadStats();
       loadMetricsSummary();
     }
-    if (tabName === "clients") loadClients();
+    if (tabName === "clients" && !clientsHaveLoaded) loadClients();
     if (tabName === "settings") loadAdminClients();
   }
 
   // Opens the embedded Review Queue inside Client Master Records.
-  function openReviewQueue() {
+  function openReviewQueue(options = {}) {
+    reviewProfileFilterNsvId = options.nsvClientId || null;
     navigateToTab("clients");
     if (dom.clients.reviewDisclosure) dom.clients.reviewDisclosure.open = true;
     loadReviews(1);
     setTimeout(() => dom.clients.reviewDisclosure?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
+
+  // Jumps from a client row/profile to only the review rows tied to that profile.
+  function openReviewQueueForClient(nsvClientId) {
+    if (!nsvClientId) return;
+    openReviewQueue({ nsvClientId });
+  }
+
+  // Returns the embedded Review Queue to its normal unfiltered mode.
+  function clearReviewProfileFilter() {
+    reviewProfileFilterNsvId = null;
+    selectedReviewIds.clear();
+    loadReviews(1);
   }
 
   // Handles clicks on the sidebar tabs.
@@ -1984,6 +2125,7 @@
   // Client search pagination state.
   let clientPage = 1;
   let clientTotalPages = 0;
+  let clientsHaveLoaded = false;
 
   // Reads the selected number of rows per page for client search.
   function getClientPageSize() {
@@ -2045,11 +2187,11 @@
   }
 
   // Fetches client search results from the backend and renders the table.
-  async function loadClients(page = clientPage) {
-    const { table, profile, workspace } = dom.clients;
+  async function loadClients(page = clientPage, options = {}) {
+    const { table } = dom.clients;
+    const savedTableScrollTop = options.preserveScroll ? table.scrollTop : 0;
+    const savedTableScrollLeft = options.preserveScroll ? table.scrollLeft : 0;
     table.innerHTML = "<p>Loading clients...</p>";
-    workspace.classList.remove("profile-open");
-    profile.setAttribute("aria-hidden", "true");
 
     try {
       const sort = getClientSortParams();
@@ -2083,7 +2225,10 @@
       }
 
       table.innerHTML = renderClientTable(clients);
+      clientsHaveLoaded = true;
       syncSelectedClientRow();
+      table.scrollTop = savedTableScrollTop;
+      table.scrollLeft = savedTableScrollLeft;
     } catch {
       table.innerHTML = "<p>Unable to load clients. Make sure the FastAPI backend and database are running.</p>";
     }
@@ -2093,6 +2238,10 @@
   function renderClientTable(clients) {
     const rows = clients.map(client => {
       const nsvClientId = escapeHtml(client.nsv_client_id ?? "");
+      const duplicateCount = Number(client.duplicate_review_count || 0);
+      const duplicateCell = duplicateCount
+        ? `<button class="secondary duplicate-review-button" onclick="event.stopPropagation(); openReviewQueueForClient('${nsvClientId}')">Review ${duplicateCount}</button>`
+        : `<span class="profile-subtitle">None</span>`;
       return `
       <tr data-nsv-client-id="${nsvClientId}" onclick="handleClientRowClick(event, this.dataset.nsvClientId)">
         <td>${escapeHtml(client.nsv_client_id ?? "N/A")}</td>
@@ -2101,6 +2250,7 @@
         <td>${escapeHtml(client.date_of_birth ?? "N/A")}</td>
         <td>${escapeHtml(client.hmis_id ?? "N/A")}</td>
         <td>${escapeHtml(client.ecw_id ?? "N/A")}</td>
+        <td>${duplicateCell}</td>
         <td><button class="secondary" onclick="event.stopPropagation(); toggleClientProfile(this.closest('tr').dataset.nsvClientId)">View</button></td>
       </tr>
     `;
@@ -2109,7 +2259,7 @@
     return `
       <table>
         <thead>
-          <tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th><th>Profile</th></tr>
+          <tr><th>NSV ID</th><th>First Name</th><th>Last Name</th><th>DOB</th><th>HMIS ID</th><th>eCW ID</th><th>Duplicates</th><th>Profile</th></tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
@@ -2453,6 +2603,22 @@
       .join("") || `<p class="profile-subtitle">No details recorded yet.</p>`;
   }
 
+  // Shows a direct path from a client profile to its filtered duplicate reviews.
+  function renderDuplicateReviewBanner(nsvClientId, duplicateReviews) {
+    const count = Number(duplicateReviews?.count || 0);
+    if (!count) return "";
+
+    return `
+      <div class="duplicate-review-banner">
+        <div>
+          <strong>${count} possible duplicate${count === 1 ? "" : "s"} need review</strong>
+          <p>Open the Review Queue already filtered to this profile.</p>
+        </div>
+        <button class="secondary duplicate-review-button" onclick="openReviewQueueForClient('${escapeHtml(nsvClientId ?? "")}')">Review duplicates</button>
+      </div>
+    `;
+  }
+
   // Closes the slide-in client profile and returns the table to full width.
   function closeClientProfile() {
     const { workspace, profile } = dom.clients;
@@ -2475,21 +2641,23 @@
 
     try {
       // Load the master client, raw profile facts, and unified service snapshot together.
-      const [clientResponse, programsResponse, detailsResponse, snapshotResponse] = await Promise.all([
+      const [clientResponse, programsResponse, detailsResponse, snapshotResponse, duplicateResponse] = await Promise.all([
         fetch(`/clients/${encodeURIComponent(nsvClientId)}`),
         fetch(`/clients/${encodeURIComponent(nsvClientId)}/programs`),
         fetch(`/clients/${encodeURIComponent(nsvClientId)}/details`),
-        fetch(`/clients/${encodeURIComponent(nsvClientId)}/service-snapshot`)
+        fetch(`/clients/${encodeURIComponent(nsvClientId)}/service-snapshot`),
+        fetch(`/clients/${encodeURIComponent(nsvClientId)}/duplicate-reviews`)
       ]);
 
       const client = await clientResponse.json();
       const programs = await programsResponse.json();
       const detailPayload = await detailsResponse.json();
       const snapshot = snapshotResponse.ok ? await snapshotResponse.json() : {};
+      const duplicateReviews = duplicateResponse.ok ? await duplicateResponse.json() : { count: 0, items: [] };
       const sources = detailPayload.sources || [];
       const details = detailPayload.details || [];
 
-      const profileModel = buildClientProfileModel({ client, programs, sources, details, snapshot });
+      const profileModel = buildClientProfileModel({ client, programs, sources, details, snapshot, duplicateReviews });
       profile.innerHTML = renderClientProfile(profileModel);
       profile.scrollTop = 0;
     } catch {
@@ -2498,7 +2666,7 @@
   }
 
   // Converts raw client/detail rows into the grouped values used by the profile cards.
-  function buildClientProfileModel({ client, programs, sources, details, snapshot }) {
+  function buildClientProfileModel({ client, programs, sources, details, snapshot, duplicateReviews }) {
     const programCounts = countBy(programs, program => program.program_name);
     const sourceCounts = countBy(sources, source => source.source_system);
     const serviceCounts = countBy(collectServiceValues(details), service => service);
@@ -2530,6 +2698,7 @@
       sourceCounts,
       serviceCounts,
       snapshot,
+      duplicateReviews,
       snapshotCounts,
       snapshotPrograms,
       recordedServices,
@@ -2574,6 +2743,7 @@
       sourceCounts,
       serviceCounts,
       snapshot,
+      duplicateReviews,
       snapshotCounts,
       snapshotPrograms,
       recordedServices,
@@ -2609,6 +2779,8 @@
           <button class="profile-tab-button" data-profile-tab="services" onclick="switchClientProfileTab('services')">Services</button>
           <button class="profile-tab-button" data-profile-tab="additional" onclick="switchClientProfileTab('additional')">Additional Info</button>
         </div>
+
+        ${renderDuplicateReviewBanner(client.nsv_client_id, duplicateReviews)}
       </div>
 
       <div class="profile-tab-panel active" data-profile-panel="summary">
@@ -2763,6 +2935,9 @@
 
     try {
       const params = new URLSearchParams({ page, page_size: pageSize });
+      if (reviewProfileFilterNsvId) {
+        params.set("possible_nsv_client_id", reviewProfileFilterNsvId);
+      }
       const response = await fetch(`/reviews?${params.toString()}`);
       const payload = await response.json();
       const reviews = payload.items || [];
@@ -2810,6 +2985,27 @@
     dom.reviews.applySelectedButton.title = selectedReviewIds.size
       ? "Do the displayed recommended action for each checked row."
       : "Check one or more rows first.";
+    renderReviewFilterNotice();
+  }
+
+  // Shows whether the Review Queue is filtered to one profile's possible duplicates.
+  function renderReviewFilterNotice() {
+    if (!dom.reviews.filterNotice) return;
+
+    if (!reviewProfileFilterNsvId) {
+      dom.reviews.filterNotice.style.display = "none";
+      dom.reviews.filterNotice.innerHTML = "";
+      return;
+    }
+
+    dom.reviews.filterNotice.style.display = "flex";
+    dom.reviews.filterNotice.innerHTML = `
+      <div>
+        <strong>Showing possible duplicates for ${escapeHtml(reviewProfileFilterNsvId)}</strong>
+        <p>Clear this filter to return to the full review queue.</p>
+      </div>
+      <button class="secondary" onclick="clearReviewProfileFilter()">Show full queue</button>
+    `;
   }
 
   // Builds the Review Queue table from backend review records.
@@ -3581,6 +3777,7 @@
           `Metric rows created: ${result.rows_imported}`
         );
       } else {
+        clientsHaveLoaded = false;
         showImportCompleteMessage(
           `Client import complete.\n\n` +
           `Rows processed: ${result.rows_processed}\n` +

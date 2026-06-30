@@ -199,9 +199,27 @@ def get_clients(
         .limit(page_size)
         .all()
     )
+    client_ids = [client.nsv_client_id for client in clients]
+    duplicate_review_counts = {}
+    if client_ids:
+        duplicate_review_counts = dict(
+            db.query(PotentialMatch.possible_nsv_client_id, func.count(PotentialMatch.review_id))
+            .filter(
+                PotentialMatch.status == "Needs Review",
+                PotentialMatch.possible_nsv_client_id.in_(client_ids),
+            )
+            .group_by(PotentialMatch.possible_nsv_client_id)
+            .all()
+        )
 
     return {
-        "items": [ClientOut.model_validate(client) for client in clients],
+        "items": [
+            {
+                **ClientOut.model_validate(client).model_dump(),
+                "duplicate_review_count": duplicate_review_counts.get(client.nsv_client_id, 0),
+            }
+            for client in clients
+        ],
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -217,6 +235,35 @@ def get_client(nsv_client_id: str, db: Session = Depends(get_db)):
     if not client:
         raise HTTPException(status_code=404, detail="Client not found.")
     return client
+
+
+@app.get("/clients/{nsv_client_id}/duplicate-reviews")
+def get_client_duplicate_reviews(nsv_client_id: str, db: Session = Depends(get_db)):
+    """Return pending duplicate/match review rows tied to one possible profile."""
+
+    client = db.query(Client).filter(Client.nsv_client_id == nsv_client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found.")
+
+    reviews = (
+        db.query(PotentialMatch)
+        .filter(
+            PotentialMatch.status == "Needs Review",
+            PotentialMatch.possible_nsv_client_id == nsv_client_id,
+        )
+        .order_by(
+            PotentialMatch.confidence_score.desc(),
+            PotentialMatch.created_at.desc(),
+            PotentialMatch.review_id.desc(),
+        )
+        .all()
+    )
+
+    return {
+        "nsv_client_id": nsv_client_id,
+        "count": len(reviews),
+        "items": [serialize_review(review, client) for review in reviews],
+    }
 
 
 @app.get("/clients/{nsv_client_id}/programs")
@@ -604,11 +651,15 @@ def serialize_review(review: PotentialMatch, possible_client: Optional[Client] =
 def get_reviews(
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
+    possible_nsv_client_id: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
 ):
     """Return paginated records that need manual matching review."""
 
     query = db.query(PotentialMatch).filter(PotentialMatch.status == "Needs Review")
+    if possible_nsv_client_id:
+        query = query.filter(PotentialMatch.possible_nsv_client_id == possible_nsv_client_id)
+
     total = query.count()
     reviews = (
         query
