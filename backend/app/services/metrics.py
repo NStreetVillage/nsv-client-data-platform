@@ -13,7 +13,8 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from .importer import (
+from app.data.models import ProgramMetric, SourceDetail
+from app.imports.importer import (
     is_metrics_layout,
     is_occupancy_report_layout,
     is_operational_metrics_layout,
@@ -21,7 +22,6 @@ from .importer import (
     normalize_import_columns,
     safe_str,
 )
-from .models import ProgramMetric, SourceDetail
 
 
 # ---------------------------------------------------------------------------

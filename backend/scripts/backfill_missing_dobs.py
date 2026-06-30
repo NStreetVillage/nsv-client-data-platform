@@ -13,9 +13,9 @@ import sys
 backend_dir = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(backend_dir))
 
-from app.database import SessionLocal
-from app.models import Client, ClientSource, SourceDetail
-from app.utils import parse_date
+from app.core.database import SessionLocal
+from app.data.models import Client, ClientSource, SourceDetail
+from app.core.utils import parse_date
 
 
 # Field names that may contain dates of birth in raw imports or source details.

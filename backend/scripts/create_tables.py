@@ -11,10 +11,10 @@ import sys
 backend_dir = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(backend_dir))
 
-from app.database import Base, engine
-from app import models
+from app.core.database import Base, engine
+from app.data import models
 
 if __name__ == "__main__":
-    # Importing app.models registers the model classes with Base.metadata.
+    # Importing app.data.models registers the model classes with Base.metadata.
     Base.metadata.create_all(bind=engine)
     print("Database tables created successfully.")

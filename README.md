@@ -163,14 +163,23 @@ uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
 ```text
 nsv-client-data-platform/
 |-- backend/        FastAPI backend, import engine, matching logic
+|   |-- app/
+|       |-- main.py           FastAPI route layer and stable uvicorn entrypoint
+|       |-- core/             Database connection and shared utilities
+|       |-- data/             SQLAlchemy models and Pydantic response schemas
+|       |-- imports/          Spreadsheet import, routing, matching, aliases
+|       |-- services/         Admin, metrics, service rules, profile snapshots
+|   |-- scripts/             Local setup and maintenance scripts
 |-- frontend/       Single-page prototype UI
+|-- src/            Human-readable source map and future src-layout plan
 |-- database/       Database notes and future schema/migration docs
 |-- docs/           Roadmap, demo plan, project documentation
 |-- sample-data/    Redacted test data only
-|-- deployment/     Server/deployment notes
-|-- reports/        Future report logic and definitions
-|-- tableau/        Future Tableau documentation/assets
-|-- ai/             Future AI feature planning
+|-- future/         Future-only placeholders, grouped out of active app code
+|   |-- deployment/ Server/deployment notes
+|   |-- reports/    Future report logic and definitions
+|   |-- tableau/    Future Tableau documentation/assets
+|   |-- ai/         Future AI feature planning
 |-- tests/          Future tests
 ```
 
@@ -217,19 +226,19 @@ backend/app/main.py
 Importer logic:
 
 ```text
-backend/app/importer.py
+backend/app/imports/importer.py
 ```
 
 Database models:
 
 ```text
-backend/app/models.py
+backend/app/data/models.py
 ```
 
 Database connection:
 
 ```text
-backend/app/database.py
+backend/app/core/database.py
 ```
 
 ### Main API Routes

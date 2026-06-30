@@ -22,7 +22,7 @@ from enum import Enum
 
 import pandas as pd
 
-from .importer import (
+from app.imports.importer import (
     is_client_identity_layout,
     is_enrichment_only_layout,
     is_metrics_layout,

@@ -8,6 +8,8 @@ venv/
 uploads/
 *.sqlite
 *.db
+*.log
+*.db-journal
 sample-data/raw/
 *.xlsx
 *.csv

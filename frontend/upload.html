@@ -543,11 +543,12 @@
       grid-template-columns: minmax(0, 1fr) 0;
       gap: 0;
       align-items: stretch;
-      height: 58vh;
-      min-height: 460px;
+      height: clamp(520px, 62vh, 760px);
+      min-height: 0;
       margin-top: var(--space-xl);
       margin-bottom: var(--space-xl);
       overflow: hidden;
+      overscroll-behavior: contain;
       transition: grid-template-columns 220ms ease, gap 220ms ease;
     }
 
@@ -566,6 +567,7 @@
       height: 100%;
       max-height: none;
       overflow: auto;
+      overscroll-behavior: contain;
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       background: var(--surface);
@@ -581,6 +583,15 @@
 
     #clientsTable tbody tr:hover td {
       background: var(--accent-soft);
+    }
+
+    #clientsTable tbody tr {
+      cursor: pointer;
+    }
+
+    #clientsTable tbody tr.is-selected td {
+      background: var(--accent-soft);
+      box-shadow: inset 4px 0 0 var(--accent);
     }
 
     #clientsTable table {
@@ -608,6 +619,7 @@
       height: 100%;
       max-height: none;
       overflow-y: auto;
+      overscroll-behavior: contain;
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       background: var(--panel-strong);
@@ -628,12 +640,24 @@
     }
 
     /* Client profile layout and cards. */
+    .profile-sticky-header {
+      position: sticky;
+      top: calc(var(--space-lg) * -1);
+      z-index: 5;
+      margin: calc(var(--space-lg) * -1) calc(var(--space-lg) * -1) var(--space-lg);
+      padding: var(--space-lg);
+      padding-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--border);
+      background: var(--panel-strong);
+      box-shadow: 0 8px 16px rgba(12,35,64,.04);
+    }
+
     .profile-header {
       display: flex;
       justify-content: space-between;
       gap: var(--space-lg);
       align-items: flex-start;
-      margin-bottom: var(--space-lg);
+      margin-bottom: var(--space-md);
     }
 
     .profile-header h2 {
@@ -654,10 +678,9 @@
 
     .profile-tabs {
       display: flex;
+      flex-wrap: wrap;
       gap: var(--space-sm);
-      margin-bottom: var(--space-md);
-      border-bottom: 1px solid var(--border);
-      padding-bottom: var(--space-sm);
+      margin-bottom: 0;
     }
 
     .profile-tab-button {
@@ -1297,11 +1320,11 @@
         </div>
       </section>
 
-      <!-- Placeholder for future Tableau embeds. -->
+      <!-- Future feature placeholder for Tableau embeds. -->
       <section id="visualizations" class="tab-content">
         <div class="header-card">
           <h2>Tableau Visualizations</h2>
-          <p>Placeholder area for embedded Tableau dashboards once the database is connected to Tableau.</p>
+          <p>Future feature area for embedded Tableau dashboards once the database is connected to Tableau.</p>
           <div class="quick-actions">
             <button class="secondary" onclick="goBackInApp()">Back</button>
             <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
@@ -1320,11 +1343,11 @@
         </div>
       </section>
 
-      <!-- Placeholder for future AI-assisted reporting features. -->
+      <!-- Future feature placeholder for AI-assisted reporting. -->
       <section id="ai" class="tab-content">
         <div class="header-card">
           <h2>AI Insights</h2>
-          <p>Placeholder area for future AI-assisted analytics after the SQL database and reporting layer are stable.</p>
+          <p>Future feature area for AI-assisted analytics after the SQL database and reporting layer are stable.</p>
           <div class="quick-actions">
             <button class="secondary" onclick="goBackInApp()">Back</button>
             <button class="secondary" onclick="navigateToTab('overview')">Back to Overview</button>
@@ -1469,7 +1492,7 @@
         </div>
       </section>
 
-      <!-- Placeholder for future admin settings. -->
+      <!-- Admin settings: current cleanup tools plus future security/import-rule placeholders. -->
       <section id="settings" class="tab-content">
         <div class="header-card">
           <h2>Admin / Settings</h2>
@@ -1599,6 +1622,7 @@
   };
 
   let activeTabName = "overview";
+  let selectedClientProfileId = null;
   const appNavigationHistory = [];
   const $ = (id) => document.getElementById(id);
 
@@ -2059,6 +2083,7 @@
       }
 
       table.innerHTML = renderClientTable(clients);
+      syncSelectedClientRow();
     } catch {
       table.innerHTML = "<p>Unable to load clients. Make sure the FastAPI backend and database are running.</p>";
     }
@@ -2066,17 +2091,20 @@
 
   // Builds one table row per client. The View button opens the profile panel.
   function renderClientTable(clients) {
-    const rows = clients.map(client => `
-      <tr>
+    const rows = clients.map(client => {
+      const nsvClientId = escapeHtml(client.nsv_client_id ?? "");
+      return `
+      <tr data-nsv-client-id="${nsvClientId}" onclick="handleClientRowClick(event, this.dataset.nsvClientId)">
         <td>${escapeHtml(client.nsv_client_id ?? "N/A")}</td>
         <td>${escapeHtml(client.first_name ?? "N/A")}</td>
         <td>${escapeHtml(client.last_name ?? "N/A")}</td>
         <td>${escapeHtml(client.date_of_birth ?? "N/A")}</td>
         <td>${escapeHtml(client.hmis_id ?? "N/A")}</td>
         <td>${escapeHtml(client.ecw_id ?? "N/A")}</td>
-        <td><button class="secondary" onclick="viewClientProfile('${escapeHtml(client.nsv_client_id)}')">View</button></td>
+        <td><button class="secondary" onclick="event.stopPropagation(); toggleClientProfile(this.closest('tr').dataset.nsvClientId)">View</button></td>
       </tr>
-    `).join("");
+    `;
+    }).join("");
 
     return `
       <table>
@@ -2086,6 +2114,37 @@
         <tbody>${rows}</tbody>
       </table>
     `;
+  }
+
+  // Clicking a client row opens that profile or switches the already-open panel
+  // to the selected client.
+  function handleClientRowClick(event, nsvClientId) {
+    if (!nsvClientId) return;
+    if (event.target.closest("button, a, input, select, textarea, label")) return;
+    toggleClientProfile(nsvClientId);
+  }
+
+  // Shared table-row/button behavior: selected row closes, other rows open.
+  function toggleClientProfile(nsvClientId) {
+    if (!nsvClientId) return;
+    if (dom.clients.workspace.classList.contains("profile-open") && selectedClientProfileId === nsvClientId) {
+      closeClientProfile();
+      return;
+    }
+    viewClientProfile(nsvClientId);
+  }
+
+  // Keeps the open profile's table row visually marked when it is visible.
+  function syncSelectedClientRow() {
+    dom.clients.table.querySelectorAll("tbody tr[data-nsv-client-id]").forEach(row => {
+      const isSelected = Boolean(selectedClientProfileId) && row.dataset.nsvClientId === selectedClientProfileId;
+      row.classList.toggle("is-selected", isSelected);
+      const button = row.querySelector("button");
+      if (button) {
+        button.textContent = isSelected ? "Close" : "View";
+        button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+      }
+    });
   }
 
   // Pressing Enter in the client search box runs the search.
@@ -2397,15 +2456,21 @@
   // Closes the slide-in client profile and returns the table to full width.
   function closeClientProfile() {
     const { workspace, profile } = dom.clients;
+    selectedClientProfileId = null;
     workspace.classList.remove("profile-open");
     profile.setAttribute("aria-hidden", "true");
+    syncSelectedClientRow();
   }
 
   // Loads and displays the profile panel for one NSV client.
   async function viewClientProfile(nsvClientId) {
+    if (!nsvClientId) return;
     const { workspace, profile } = dom.clients;
+    selectedClientProfileId = nsvClientId;
     workspace.classList.add("profile-open");
     profile.setAttribute("aria-hidden", "false");
+    profile.scrollTop = 0;
+    syncSelectedClientRow();
     profile.innerHTML = "<p>Loading client profile...</p>";
 
     try {
@@ -2426,6 +2491,7 @@
 
       const profileModel = buildClientProfileModel({ client, programs, sources, details, snapshot });
       profile.innerHTML = renderClientProfile(profileModel);
+      profile.scrollTop = 0;
     } catch {
       profile.innerHTML = "<p>Unable to load client profile. Make sure the backend and database are running.</p>";
     }
@@ -2529,18 +2595,20 @@
     } = model;
 
     return `
-      <div class="profile-header">
-        <div>
-          <h2>${escapeHtml(client.first_name ?? "N/A")} ${escapeHtml(client.last_name ?? "")}</h2>
-          <p class="profile-subtitle">${escapeHtml(client.nsv_client_id ?? "N/A")} - DOB ${escapeHtml(client.date_of_birth ?? "N/A")}</p>
+      <div class="profile-sticky-header">
+        <div class="profile-header">
+          <div>
+            <h2>${escapeHtml(client.first_name ?? "N/A")} ${escapeHtml(client.last_name ?? "")}</h2>
+            <p class="profile-subtitle">${escapeHtml(client.nsv_client_id ?? "N/A")} - DOB ${escapeHtml(client.date_of_birth ?? "N/A")}</p>
+          </div>
+          <button class="secondary" onclick="closeClientProfile()">Close</button>
         </div>
-        <button class="secondary" onclick="closeClientProfile()">Close</button>
-      </div>
 
-      <div class="profile-tabs">
-        <button class="profile-tab-button active" data-profile-tab="summary" onclick="switchClientProfileTab('summary')">Summary</button>
-        <button class="profile-tab-button" data-profile-tab="services" onclick="switchClientProfileTab('services')">Services</button>
-        <button class="profile-tab-button" data-profile-tab="additional" onclick="switchClientProfileTab('additional')">Additional Info</button>
+        <div class="profile-tabs">
+          <button class="profile-tab-button active" data-profile-tab="summary" onclick="switchClientProfileTab('summary')">Summary</button>
+          <button class="profile-tab-button" data-profile-tab="services" onclick="switchClientProfileTab('services')">Services</button>
+          <button class="profile-tab-button" data-profile-tab="additional" onclick="switchClientProfileTab('additional')">Additional Info</button>
+        </div>
       </div>
 
       <div class="profile-tab-panel active" data-profile-panel="summary">

@@ -14,10 +14,10 @@ from collections import defaultdict
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .importer import safe_str
-from .metrics import split_service_metric_values, looks_like_program_or_organization
-from .models import Client, ClientSource, Enrollment, Program, SourceDetail
-from .service_rules import (
+from app.data.models import Client, ClientSource, Enrollment, Program, SourceDetail
+from app.imports.importer import safe_str
+from app.services.metrics import split_service_metric_values, looks_like_program_or_organization
+from app.services.service_rules import (
     HEALTH_GAP_NEEDS,
     NEED_SIGNAL_FIELDS,
     health_categories_for_value,

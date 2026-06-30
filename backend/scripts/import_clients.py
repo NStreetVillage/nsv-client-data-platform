@@ -6,8 +6,8 @@ the browser UI.
 """
 
 import argparse
-from app.database import SessionLocal
-from app.importer import import_file
+from app.core.database import SessionLocal
+from app.imports.importer import import_file
 
 if __name__ == "__main__":
     # Collect the file path and required source/program context from the CLI.

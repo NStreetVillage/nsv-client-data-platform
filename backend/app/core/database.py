@@ -9,10 +9,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 # Load values from backend/.env so local development can configure DATABASE_URL.
-BACKEND_DIR = Path(__file__).resolve().parents[1]
+BACKEND_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(BACKEND_DIR / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -40,4 +40,5 @@ engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 # All ORM model classes inherit from Base so create_all can discover them.
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
